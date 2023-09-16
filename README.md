@@ -42,8 +42,14 @@ You can read ROS_Guides folder ROS Noetic guides.
 
 This repo was clonned from https://github.com/erhangk/ROS_Guides.git
 
-### Installing gazebo models
+### Installing gazebo tools
 
 Gazebosim link:
 
 `http://models.gazebosim.org/`
+
+Gazebo camera plugin guides:
+
+`https://classic.gazebosim.org/tutorials?tut=ros_gzplugins`
+
+`https://answers.ros.org/question/210695/adding-a-camera-to-a-model-in-gazebo-beginner/`
