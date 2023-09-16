@@ -1,5 +1,0 @@
-my_robot_controller
-/home/erhangk/drone_ws/devel/.private/my_robot_controller/cmake.lock /home/erhangk/drone_ws/devel/./cmake.lock
-/home/erhangk/drone_ws/devel/.private/my_robot_controller/lib/pkgconfig/my_robot_controller.pc /home/erhangk/drone_ws/devel/lib/pkgconfig/my_robot_controller.pc
-/home/erhangk/drone_ws/devel/.private/my_robot_controller/share/my_robot_controller/cmake/my_robot_controllerConfig.cmake /home/erhangk/drone_ws/devel/share/my_robot_controller/cmake/my_robot_controllerConfig.cmake
-/home/erhangk/drone_ws/devel/.private/my_robot_controller/share/my_robot_controller/cmake/my_robot_controllerConfig-version.cmake /home/erhangk/drone_ws/devel/share/my_robot_controller/cmake/my_robot_controllerConfig-version.cmake
