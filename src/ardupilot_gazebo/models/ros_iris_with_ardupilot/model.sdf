@@ -6,13 +6,13 @@
     </include>
 
     <include>
-      <uri>model://gimbal_small_2d</uri>
+      <uri>model://ros_gimbal_small_2d</uri>
       <pose>0 -0.01 0.070 1.57 0 1.57</pose>
     </include>
 
     <joint name="iris_gimbal_mount" type="revolute">
       <parent>iris::base_link</parent>
-      <child>gimbal_small_2d::base_link</child>
+      <child>ros_gimbal_small_2d::base_link</child>
       <axis>
         <limit>
           <lower>0</lower>

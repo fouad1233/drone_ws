@@ -58,6 +58,8 @@ Rosservices:
 
 	rosservice call /.....
 	
+Find ros package location:
+	rospack find gazebo_ros
 	
 	
 	

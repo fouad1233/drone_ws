@@ -1,6 +1,6 @@
 <?xml version='1.0'?>
 <sdf version='1.6'>
-  <model name='gimbal_small_2d'>
+  <model name='ros_gimbal_small_2d'>
     <pose>0 0 0.18 0 0 0</pose>
 
     <link name='base_link'>
@@ -145,21 +145,24 @@
             <far>15000</far>
           </clip>
         </camera>
-        <plugin name="camera_controller" filename="libgazebo_ros_camera.so">
-	 <alwaysOn>true</alwaysOn>
-	 <updateRate>0.0</updateRate>
-	 <cameraName>drone/camera1</cameraName>
-	 <imageTopicName>image_raw</imageTopicName>
-	 <cameraInfoTopicName>camera_info</cameraInfoTopicName>
-	 <frameName>camera_link</frameName>
-	 <hackBaseline>0.07</hackBaseline>
-	 <distortionK1>0.0</distortionK1>
-	 <distortionK2>0.0</distortionK2>
-	 <distortionK3>0.0</distortionK3>
-	 <distortionT1>0.0</distortionT1>
-	 <distortionT2>0.0</distortionT2>
-        </plugin>
+        <always_on>1</always_on>
+        <update_rate>30</update_rate>
         <visualize>1</visualize>
+        <plugin name="camera_controller" filename="libgazebo_ros_camera.so">
+          <robotNamespace>roscam</robotNamespace>
+          <alwaysOn>true</alwaysOn>
+          <updateRate>0.0</updateRate>
+          <cameraName>cam</cameraName>
+          <imageTopicName>image_raw</imageTopicName>
+          <cameraInfoTopicName>camera_info</cameraInfoTopicName>
+          <frameName>camera_link</frameName>
+          <hackBaseline>0.07</hackBaseline>
+          <distortionK1>0.0</distortionK1>
+          <distortionK2>0.0</distortionK2>
+          <distortionK3>0.0</distortionK3>
+          <distortionT1>0.0</distortionT1>
+          <distortionT2>0.0</distortionT2>
+        </plugin>
       </sensor>
 
     </link>
@@ -190,7 +193,7 @@
       <pose>0 0 0.02 0 0 0</pose>
     </joint>
 
-    <plugin name="gimbal_small_2d" filename="libGimbalSmall2dPlugin.so">
+    <plugin name="ros_gimbal_small_2d" filename="libGimbalSmall2dPlugin.so">
       <joint>tilt_joint</joint>
     </plugin>
   </model>

@@ -1,169 +1,205 @@
-cmake_minimum_required(VERSION 2.8 FATAL_ERROR)
+cmake_minimum_required(VERSION 3.0.2)
+project(ardupilot_gazebo)
+
+## Compile as C++11, supported in ROS Kinetic and newer
+# add_compile_options(-std=c++11)
+
+## Find catkin macros and libraries
+## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
+## is used, also find other catkin packages
+find_package(catkin REQUIRED COMPONENTS
+  roscpp
+  rospy
+)
+
+## System dependencies are found with CMake's conventions
+# find_package(Boost REQUIRED COMPONENTS system)
 
 
-project(ardupilot_sitl_gazebo)
+## Uncomment this if the package has a setup.py. This macro ensures
+## modules and global scripts declared therein get installed
+## See http://ros.org/doc/api/catkin/html/user_guide/setup_dot_py.html
+# catkin_python_setup()
 
+################################################
+## Declare ROS messages, services and actions ##
+################################################
 
-#######################
-## Find Dependencies ##
-#######################
+## To declare and build messages, services or actions from within this
+## package, follow these steps:
+## * Let MSG_DEP_SET be the set of packages whose message types you use in
+##   your messages/services/actions (e.g. std_msgs, actionlib_msgs, ...).
+## * In the file package.xml:
+##   * add a build_depend tag for "message_generation"
+##   * add a build_depend and a exec_depend tag for each package in MSG_DEP_SET
+##   * If MSG_DEP_SET isn't empty the following dependency has been pulled in
+##     but can be declared for certainty nonetheless:
+##     * add a exec_depend tag for "message_runtime"
+## * In this file (CMakeLists.txt):
+##   * add "message_generation" and every package in MSG_DEP_SET to
+##     find_package(catkin REQUIRED COMPONENTS ...)
+##   * add "message_runtime" and every package in MSG_DEP_SET to
+##     catkin_package(CATKIN_DEPENDS ...)
+##   * uncomment the add_*_files sections below as needed
+##     and list every .msg/.srv/.action file to be processed
+##   * uncomment the generate_messages entry below
+##   * add every package in MSG_DEP_SET to generate_messages(DEPENDENCIES ...)
 
-find_package(gazebo REQUIRED)
-#set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${GAZEBO_CXX_FLAGS}")
+## Generate messages in the 'msg' folder
+# add_message_files(
+#   FILES
+#   Message1.msg
+#   Message2.msg
+# )
 
-if("${GAZEBO_VERSION}" VERSION_LESS "8.0")
-    message(FATAL_ERROR "You need at least Gazebo 8.0. Your version: ${GAZEBO_VERSION}")
-else()
-    message("Gazebo version: ${GAZEBO_VERSION}")
-endif()
+## Generate services in the 'srv' folder
+# add_service_files(
+#   FILES
+#   Service1.srv
+#   Service2.srv
+# )
 
-###### COMPILE RULES ######
-include(CheckCXXCompilerFlag)
+## Generate actions in the 'action' folder
+# add_action_files(
+#   FILES
+#   Action1.action
+#   Action2.action
+# )
 
-macro(filter_valid_compiler_flags)
-  foreach(flag ${ARGN})
-    CHECK_CXX_COMPILER_FLAG(${flag} R${flag})
-    if(${R${flag}})
-      set(VALID_CXX_FLAGS "${VALID_CXX_FLAGS} ${flag}")
-    endif()
-  endforeach()
-endmacro()
+## Generate added messages and services with any dependencies listed here
+# generate_messages(
+#   DEPENDENCIES
+#   std_msgs  # Or other packages containing msgs
+# )
 
-set(CMAKE_CXX_EXTENSIONS off)  # see gazebo CMakeList
+################################################
+## Declare ROS dynamic reconfigure parameters ##
+################################################
 
-if (NOT CMAKE_BUILD_TYPE)
-  set (CMAKE_BUILD_TYPE "RelWithDebInfo" CACHE STRING
-      "Choose the type of build, options are: Debug Release RelWithDebInfo Profile Check" FORCE)
-endif (NOT CMAKE_BUILD_TYPE)
+## To declare and build dynamic reconfigure parameters within this
+## package, follow these steps:
+## * In the file package.xml:
+##   * add a build_depend and a exec_depend tag for "dynamic_reconfigure"
+## * In this file (CMakeLists.txt):
+##   * add "dynamic_reconfigure" to
+##     find_package(catkin REQUIRED COMPONENTS ...)
+##   * uncomment the "generate_dynamic_reconfigure_options" section below
+##     and list every .cfg file to be processed
 
-# Build type link flags
-set (CMAKE_LINK_FLAGS_RELEASE " " CACHE INTERNAL "Link flags for release" FORCE)
-set (CMAKE_LINK_FLAGS_RELWITHDEBINFO " " CACHE INTERNAL "Link flags for release with debug support" FORCE)
-set (CMAKE_LINK_FLAGS_DEBUG " " CACHE INTERNAL "Link flags for debug" FORCE)
-set (CMAKE_LINK_FLAGS_PROFILE " -pg" CACHE INTERNAL "Link flags for profile" FORCE)
-set (CMAKE_LINK_FLAGS_COVERAGE " --coverage" CACHE INTERNAL "Link flags for static code coverage" FORCE)
+## Generate dynamic reconfigure parameters in the 'cfg' folder
+# generate_dynamic_reconfigure_options(
+#   cfg/DynReconf1.cfg
+#   cfg/DynReconf2.cfg
+# )
 
-set (CMAKE_C_FLAGS_RELEASE "")
-if (NOT "${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang" AND NOT MSVC)
-  # -s doesn't work with clang or Visual Studio, see alternative in link below:
-  # http://stackoverflow.com/questions/6085491/gcc-vs-clang-symbol-strippingu
-  set (CMAKE_C_FLAGS_RELEASE "-s")
-endif()
-
-if (NOT MSVC)
-  set (CMAKE_C_FLAGS_RELEASE " ${CMAKE_C_FLAGS_RELEASE} -O3 -DNDEBUG ${CMAKE_C_FLAGS_ALL}" CACHE INTERNAL "C Flags for release" FORCE)
-  set (CMAKE_CXX_FLAGS_RELEASE ${CMAKE_C_FLAGS_RELEASE})
-
-  set (CMAKE_C_FLAGS_RELWITHDEBINFO " -g -O2 ${CMAKE_C_FLAGS_ALL}" CACHE INTERNAL "C Flags for release with debug support" FORCE)
-  set (CMAKE_CXX_FLAGS_RELWITHDEBINFO ${CMAKE_C_FLAGS_RELWITHDEBINFO})
-
-  set (CMAKE_C_FLAGS_DEBUG " -ggdb3 ${CMAKE_C_FLAGS_ALL}" CACHE INTERNAL "C Flags for debug" FORCE)
-  set (CMAKE_CXX_FLAGS_DEBUG ${CMAKE_C_FLAGS_DEBUG})
-
-  set (CMAKE_C_FLAGS_PROFILE " -fno-omit-frame-pointer -g -pg ${CMAKE_C_FLAGS_ALL}" CACHE INTERNAL "C Flags for profile" FORCE)
-  set (CMAKE_CXX_FLAGS_PROFILE ${CMAKE_C_FLAGS_PROFILE})
-
-  set (CMAKE_C_FLAGS_COVERAGE " -g -O0 -Wformat=2 --coverage -fno-inline ${CMAKE_C_FLAGS_ALL}" CACHE INTERNAL "C Flags for static code coverage" FORCE)
-  set (CMAKE_CXX_FLAGS_COVERAGE "${CMAKE_C_FLAGS_COVERAGE}")
-  if (NOT "${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
-    # -fno-default-inline -fno-implicit-inline-templates are unimplemented, cause errors in clang
-    # -fno-elide-constructors can cause seg-faults in clang 3.4 and earlier
-    # http://llvm.org/bugs/show_bug.cgi?id=12208
-    set (CMAKE_CXX_FLAGS_COVERAGE "${CMAKE_CXX_FLAGS_COVERAGE} -fno-default-inline -fno-implicit-inline-templates -fno-elide-constructors")
-  endif()
-endif()
-
-#####################################
-# Set all the global build flags
-set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS_${CMAKE_BUILD_TYPE_UPPERCASE}}")
-set (CMAKE_EXE_LINKER_FLAGS "${CMAKE_LINK_FLAGS_${CMAKE_BUILD_TYPE_UPPERCASE}}")
-set (CMAKE_SHARED_LINKER_FLAGS "${CMAKE_LINK_FLAGS_${CMAKE_BUILD_TYPE_UPPERCASE}}")
-set (CMAKE_MODULE_LINKER_FLAGS "${CMAKE_LINK_FLAGS_${CMAKE_BUILD_TYPE_UPPERCASE}}")
-
-# Compiler-specific C++11 activation.
-if ("${CMAKE_CXX_COMPILER_ID}" MATCHES "GNU")
-  execute_process(
-      COMMAND ${CMAKE_CXX_COMPILER} -dumpversion OUTPUT_VARIABLE GCC_VERSION)
-  if (NOT (GCC_VERSION VERSION_GREATER 4.7))
-    message(FATAL_ERROR "${PROJECT_NAME} requires g++ 4.8 or greater.")
-  endif ()
-elseif ("${CMAKE_CXX_COMPILER_ID}" MATCHES "Clang")
-  execute_process(
-      COMMAND ${CMAKE_CXX_COMPILER} -dumpversion OUTPUT_VARIABLE CLANG_VERSION)
-  if (NOT (CLANG_VERSION VERSION_GREATER 3.2))
-    message(FATAL_ERROR "${PROJECT_NAME} requires clang 3.3 or greater.")
-  endif ()
-
-  if ("${CMAKE_SYSTEM_NAME}" MATCHES "Darwin")
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -stdlib=libc++")
-  endif ()
-elseif ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC")
-  if (MSVC_VERSION LESS 1800)
-    message(FATAL_ERROR "${PROJECT_NAME} requires VS 2013 or greater.")
-  endif ()
-else ()
-  message(FATAL_ERROR "Your C++ compiler does not support C++11.")
-endif ()
-
-set(WARN_LEVEL "-Wall")
-filter_valid_compiler_flags(${WARN_LEVEL}
-    -Wextra -Wno-long-long -Wno-unused-value -Wfloat-equal -Wshadow
-    -Wswitch-default -Wmissing-include-dirs -pedantic)
-if (UNIX AND NOT APPLE)
-  filter_valid_compiler_flags(-fvisibility=hidden -fvisibility-inlines-hidden)
-endif()
-
-set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${VALID_CXX_FLAGS}")
+###################################
+## catkin specific configuration ##
+###################################
+## The catkin_package macro generates cmake config files for your package
+## Declare things to be passed to dependent projects
+## INCLUDE_DIRS: uncomment this if your package contains header files
+## LIBRARIES: libraries you create in this project that dependent projects also need
+## CATKIN_DEPENDS: catkin_packages dependent projects also need
+## DEPENDS: system dependencies of this project that dependent projects also need
+catkin_package(
+#  INCLUDE_DIRS include
+#  LIBRARIES ardupilot_gazebo
+#  CATKIN_DEPENDS roscpp rospy
+#  DEPENDS system_lib
+)
 
 ###########
 ## Build ##
 ###########
 
+## Specify additional locations of header files
+## Your package locations should be listed before other locations
 include_directories(
-        ${PROJECT_SOURCE_DIR}
-        include
-        ${GAZEBO_INCLUDE_DIRS}
-        )
+# include
+  ${catkin_INCLUDE_DIRS}
+)
 
-link_libraries(
-        ${GAZEBO_LIBRARIES}
-        )
+## Declare a C++ library
+# add_library(${PROJECT_NAME}
+#   src/${PROJECT_NAME}/ardupilot_gazebo.cpp
+# )
 
-link_directories(
-        ${GAZEBO_LIBRARY_DIRS}
-        )
+## Add cmake target dependencies of the library
+## as an example, code may need to be generated before libraries
+## either from message generation or dynamic reconfigure
+# add_dependencies(${PROJECT_NAME} ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 
-set (plugins_single_header
-        ArduPilotPlugin
-        ArduCopterIRLockPlugin
-        GimbalSmall2dPlugin
-        )
+## Declare a C++ executable
+## With catkin_make all packages are built within a single CMake context
+## The recommended prefix ensures that target names across packages don't collide
+# add_executable(${PROJECT_NAME}_node src/ardupilot_gazebo_node.cpp)
 
-add_library(ArduCopterIRLockPlugin SHARED src/ArduCopterIRLockPlugin.cc)
-target_link_libraries(ArduCopterIRLockPlugin ${GAZEBO_LIBRARIES})
+## Rename C++ executable without prefix
+## The above recommended prefix causes long target names, the following renames the
+## target back to the shorter version for ease of user use
+## e.g. "rosrun someones_pkg node" instead of "rosrun someones_pkg someones_pkg_node"
+# set_target_properties(${PROJECT_NAME}_node PROPERTIES OUTPUT_NAME node PREFIX "")
 
-add_library(ArduPilotPlugin SHARED src/ArduPilotPlugin.cc)
-target_link_libraries(ArduPilotPlugin ${GAZEBO_LIBRARIES})
+## Add cmake target dependencies of the executable
+## same as for the library above
+# add_dependencies(${PROJECT_NAME}_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 
-if("${GAZEBO_VERSION}" VERSION_LESS "8.0")
-    add_library(GimbalSmall2dPlugin SHARED src/GimbalSmall2dPlugin.cc)
-    target_link_libraries(GimbalSmall2dPlugin ${GAZEBO_LIBRARIES})
-    install(TARGETS GimbalSmall2dPlugin DESTINATION ${GAZEBO_PLUGIN_PATH})
-endif()
+## Specify libraries to link a library or executable target against
+# target_link_libraries(${PROJECT_NAME}_node
+#   ${catkin_LIBRARIES}
+# )
 
-install(TARGETS ArduCopterIRLockPlugin DESTINATION ${GAZEBO_PLUGIN_PATH})
-install(TARGETS ArduPilotPlugin DESTINATION ${GAZEBO_PLUGIN_PATH})
+#############
+## Install ##
+#############
 
-install(DIRECTORY models DESTINATION ${GAZEBO_MODEL_PATH}/..)
-install(DIRECTORY worlds DESTINATION ${GAZEBO_MODEL_PATH}/..)
+# all install targets should use catkin DESTINATION variables
+# See http://ros.org/doc/api/catkin/html/adv_user_guide/variables.html
 
-# uninstall target
-if(NOT TARGET uninstall)
-  configure_file(
-    "${CMAKE_CURRENT_SOURCE_DIR}/cmake/cmake_uninstall.cmake.in"
-    "${CMAKE_CURRENT_BINARY_DIR}/cmake_uninstall.cmake"
-    IMMEDIATE @ONLY)
+## Mark executable scripts (Python etc.) for installation
+## in contrast to setup.py, you can choose the destination
+# catkin_install_python(PROGRAMS
+#   scripts/my_python_script
+#   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
+# )
 
-  add_custom_target(uninstall
-    COMMAND ${CMAKE_COMMAND} -P ${CMAKE_CURRENT_BINARY_DIR}/cmake_uninstall.cmake)
-endif()
+## Mark executables for installation
+## See http://docs.ros.org/melodic/api/catkin/html/howto/format1/building_executables.html
+# install(TARGETS ${PROJECT_NAME}_node
+#   RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
+# )
+
+## Mark libraries for installation
+## See http://docs.ros.org/melodic/api/catkin/html/howto/format1/building_libraries.html
+# install(TARGETS ${PROJECT_NAME}
+#   ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
+#   LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
+#   RUNTIME DESTINATION ${CATKIN_GLOBAL_BIN_DESTINATION}
+# )
+
+## Mark cpp header files for installation
+# install(DIRECTORY include/${PROJECT_NAME}/
+#   DESTINATION ${CATKIN_PACKAGE_INCLUDE_DESTINATION}
+#   FILES_MATCHING PATTERN "*.h"
+#   PATTERN ".svn" EXCLUDE
+# )
+
+## Mark other files for installation (e.g. launch and bag files, etc.)
+# install(FILES
+#   # myfile1
+#   # myfile2
+#   DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}
+# )
+
+#############
+## Testing ##
+#############
+
+## Add gtest based cpp test target and link libraries
+# catkin_add_gtest(${PROJECT_NAME}-test test/test_ardupilot_gazebo.cpp)
+# if(TARGET ${PROJECT_NAME}-test)
+#   target_link_libraries(${PROJECT_NAME}-test ${PROJECT_NAME})
+# endif()
+
+## Add folders to be run by python nosetests
+# catkin_add_nosetests(test)
