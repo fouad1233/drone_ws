@@ -46,10 +46,51 @@ This repo was clonned from https://github.com/erhangk/ROS_Guides.git
 
 Gazebosim link:
 
-`http://models.gazebosim.org/`
+http://models.gazebosim.org/
 
 Gazebo camera plugin guides:
 
-`https://classic.gazebosim.org/tutorials?tut=ros_gzplugins`
+https://classic.gazebosim.org/tutorials?tut=ros_gzplugins
 
-`https://answers.ros.org/question/210695/adding-a-camera-to-a-model-in-gazebo-beginner/`
+https://answers.ros.org/question/210695/adding-a-camera-to-a-model-in-gazebo-beginner/
+
+### Running Simulation
+
+```
+roslaunch ardupilot_gazebo iris_with_roscam.launch
+```
+
+Check if camera topics are being published:
+
+```
+rostopic list
+```
+
+You should see something like this:
+
+```
+erhangk@erhan-Acer:~$ rostopic list
+/clock
+/gazebo/link_states
+/gazebo/model_states
+/gazebo/parameter_descriptions
+/gazebo/parameter_updates
+/gazebo/performance_metrics
+/gazebo/set_link_state
+/gazebo/set_model_state
+/roscam/cam/camera_info
+/roscam/cam/image_raw
+/roscam/cam/image_raw/compressed
+/roscam/cam/image_raw/compressed/parameter_descriptions
+/roscam/cam/image_raw/compressed/parameter_updates
+/roscam/cam/image_raw/compressedDepth
+/roscam/cam/image_raw/compressedDepth/parameter_descriptions
+/roscam/cam/image_raw/compressedDepth/parameter_updates
+/roscam/cam/image_raw/theora
+/roscam/cam/image_raw/theora/parameter_descriptions
+/roscam/cam/image_raw/theora/parameter_updates
+/roscam/cam/parameter_descriptions
+/roscam/cam/parameter_updates
+/rosout
+/rosout_agg
+```
