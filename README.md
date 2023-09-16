@@ -12,6 +12,9 @@ or
 git clone https://<oauth-key-goes-here>@github.com/gtu-ros/drone_ws.git
 ```
 
+
+Add setup.bash to your .bashrc
+
 ```
 echo "source ~/drone_ws/devel/setup.bash" >> ~/.bashrc
 ```
