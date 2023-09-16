@@ -38,7 +38,12 @@ Update global variables
 source ~/.bashrc
 ```
 
-
 You can read ROS_Guides folder ROS Noetic guides.
 
 This repo was clonned from https://github.com/erhangk/ROS_Guides.git
+
+### Installing gazebo models
+
+Gazebosim link:
+
+`http://models.gazebosim.org/`
