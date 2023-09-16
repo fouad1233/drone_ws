@@ -1,0 +1,21 @@
+mavros/mavros
+/home/erhangk/drone_ws/devel/.private/mavros/cmake.lock /home/erhangk/drone_ws/devel/./cmake.lock
+/home/erhangk/drone_ws/devel/.private/mavros/lib/libmavros_plugins.so /home/erhangk/drone_ws/devel/lib/libmavros_plugins.so
+/home/erhangk/drone_ws/devel/.private/mavros/lib/libmavros.so /home/erhangk/drone_ws/devel/lib/libmavros.so
+/home/erhangk/drone_ws/devel/.private/mavros/lib/pkgconfig/mavros.pc /home/erhangk/drone_ws/devel/lib/pkgconfig/mavros.pc
+/home/erhangk/drone_ws/devel/.private/mavros/lib/python3/dist-packages/mavros/__init__.py /home/erhangk/drone_ws/devel/lib/python3/dist-packages/mavros/__init__.py
+/home/erhangk/drone_ws/devel/.private/mavros/lib/mavros/gcs_bridge /home/erhangk/drone_ws/devel/lib/mavros/gcs_bridge
+/home/erhangk/drone_ws/devel/.private/mavros/lib/mavros/mavparam /home/erhangk/drone_ws/devel/lib/mavros/mavparam
+/home/erhangk/drone_ws/devel/.private/mavros/lib/mavros/mavftp /home/erhangk/drone_ws/devel/lib/mavros/mavftp
+/home/erhangk/drone_ws/devel/.private/mavros/lib/mavros/event_launcher /home/erhangk/drone_ws/devel/lib/mavros/event_launcher
+/home/erhangk/drone_ws/devel/.private/mavros/lib/mavros/cmake.lock /home/erhangk/drone_ws/devel/lib/mavros/cmake.lock
+/home/erhangk/drone_ws/devel/.private/mavros/lib/mavros/mavwp /home/erhangk/drone_ws/devel/lib/mavros/mavwp
+/home/erhangk/drone_ws/devel/.private/mavros/lib/mavros/mavsetp /home/erhangk/drone_ws/devel/lib/mavros/mavsetp
+/home/erhangk/drone_ws/devel/.private/mavros/lib/mavros/mavsys /home/erhangk/drone_ws/devel/lib/mavros/mavsys
+/home/erhangk/drone_ws/devel/.private/mavros/lib/mavros/mavsafety /home/erhangk/drone_ws/devel/lib/mavros/mavsafety
+/home/erhangk/drone_ws/devel/.private/mavros/lib/mavros/checkid /home/erhangk/drone_ws/devel/lib/mavros/checkid
+/home/erhangk/drone_ws/devel/.private/mavros/lib/mavros/install_geographiclib_datasets.sh /home/erhangk/drone_ws/devel/lib/mavros/install_geographiclib_datasets.sh
+/home/erhangk/drone_ws/devel/.private/mavros/lib/mavros/mavros_node /home/erhangk/drone_ws/devel/lib/mavros/mavros_node
+/home/erhangk/drone_ws/devel/.private/mavros/lib/mavros/mavcmd /home/erhangk/drone_ws/devel/lib/mavros/mavcmd
+/home/erhangk/drone_ws/devel/.private/mavros/share/mavros/cmake/mavrosConfig.cmake /home/erhangk/drone_ws/devel/share/mavros/cmake/mavrosConfig.cmake
+/home/erhangk/drone_ws/devel/.private/mavros/share/mavros/cmake/mavrosConfig-version.cmake /home/erhangk/drone_ws/devel/share/mavros/cmake/mavrosConfig-version.cmake
