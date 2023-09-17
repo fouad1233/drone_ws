@@ -54,6 +54,26 @@ https://classic.gazebosim.org/tutorials?tut=ros_gzplugins
 
 https://answers.ros.org/question/210695/adding-a-camera-to-a-model-in-gazebo-beginner/
 
+##### Edit .bashrc
+
+Your .bashrc file should look like this:
+
+```
+alias start_ardupilot='./start_ardupilot.sh'
+alias start_gazebo='gazebo --verbose worlds/iris_arducopter_runway.world'
+alias start_rosgazebo='roslaunch ardupilot_gazebo iris_with_roscam.launch'
+
+source /opt/ros/noetic/setup.bash
+source ~/drone_ws/devel/setup.bash
+
+export PATH=$PATH:$HOME/ardupilot/Tools/autotest
+export PATH=/usr/lib/ccache:$PATH
+source /usr/share/gazebo/setup.sh
+export GAZEBO_MODEL_PATH=~/ardupilot_gazebo/models
+
+GAZEBO_MODEL_PATH=/home/erhangk/drone_ws/src/ardupilot_gazebo/models
+```
+
 ### Running Simulation
 
 ```
