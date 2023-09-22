@@ -85,3 +85,13 @@ rospack find gazebo_ros
 http://wiki.ros.org/msg      inthttp://wiki.ros.org/std_msgs
 
 http://wiki.ros.org/std_srvs
+
+###### Debug msg and srv
+
+```
+rosmsg list
+rosmsg show ros_msgs/HardwareStatus
+rossrv list 
+rossrv show ros_msgs/ComputeDiskArea
+
+```
