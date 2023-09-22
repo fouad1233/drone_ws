@@ -1,0 +1,8 @@
+<launch>
+    <param name="/number_publish_freq" type="double" value="1.0" />
+    <param name="/number_to_publish" type="int" value="10" />
+
+    <node name="number_publisher_param" pkg="ros_guides" type = "number_publisher_param.py" />
+    <node name="number_counter" pkg="ros_guides" type = "number_counter.py" />
+
+</launch>

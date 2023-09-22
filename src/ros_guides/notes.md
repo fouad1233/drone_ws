@@ -95,3 +95,31 @@ rossrv list
 rossrv show ros_msgs/ComputeDiskArea
 
 ```
+
+###### Ros Paremeters
+
+```
+rosparam list
+rosparam set /robot_name "my_robot"
+rosparam set /sensors_read_freq 50
+rosparam set /simulation_mode false
+rosparam get /simulation_mode
+```
+
+###### Launch Files
+
+```
+roslaunch ros_bringup number_app.launch
+```
+
+###### Ros Bags
+
+```
+rosrun ros_guides hw_status_publisher.py 
+rosbag record /my_robot/hw_status
+rosbag info 2023-09-22-22-57-50.bag 
+
+#stop the publisher node and listen the topic
+rostopic echo /my_robot/hw_status #dont forget to listen the topic first
+rosbag play 2023-09-22-22-57-50.bag
+```
