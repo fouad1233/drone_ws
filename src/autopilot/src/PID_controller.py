@@ -2,7 +2,7 @@
 import rospy
 
 class PIDController:
-    def __init__(self,Kp:float = 0, Ki:float = 0, Kd:float = 0,Ku:float = None,Tu:float = None, alpha:float = 0.15, sampleRate:int = 50):
+    def __init__(self,Kp:float = 0, Ki:float = 0, Kd:float = 0,Ku:float = None,Tu:float = None, Imax = 0 , alpha:float = 0.15, sampleRate:int = 50):
         """PID Controller Class
 
         Args:
@@ -33,6 +33,8 @@ class PIDController:
         self.prevPTerm = 0
         self.prevITerm = 0
         self.prevDTerm = 0
+        
+        self.Imax = Imax
         
         self.error = 0
         self.prevError = 0
@@ -100,6 +102,10 @@ class PIDController:
         
     def getITerm(self,error,sampleTime):
         self.ITerm = self.prevITerm + self.Ki * (error + self.prevError) * sampleTime / 2
+        if self.ITerm > self.Imax:
+            self.ITerm = self.Imax
+        elif self.ITerm < -self.Imax:
+            self.ITerm = -self.Imax
         self.prevITerm = self.ITerm
         
     def getDTerm(self,error,sampleTime):

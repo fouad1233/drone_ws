@@ -79,3 +79,9 @@ rosservice call /.....
 ```
 rospack find gazebo_ros
 ```
+
+###### Ros msg and srv types:
+
+http://wiki.ros.org/msg      inthttp://wiki.ros.org/std_msgs
+
+http://wiki.ros.org/std_srvs
