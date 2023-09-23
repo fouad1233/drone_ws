@@ -71,7 +71,7 @@ export PATH=/usr/lib/ccache:$PATH
 source /usr/share/gazebo/setup.sh
 export GAZEBO_MODEL_PATH=~/ardupilot_gazebo/models
 
-GAZEBO_MODEL_PATH=/home/erhangk/drone_ws/src/ardupilot_gazebo/models
+GAZEBO_MODEL_PATH=~/drone_ws/src/ardupilot_gazebo/models
 ```
 
 ### Running Simulation
