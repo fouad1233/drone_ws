@@ -66,10 +66,12 @@ alias start_rosgazebo='roslaunch ardupilot_gazebo iris_with_roscam.launch'
 source /opt/ros/noetic/setup.bash
 source ~/drone_ws/devel/setup.bash
 
-export PATH=$PATH:$HOME/drone_ws/src/ardupilot/Tools/autotest
+export PATH=$PATH:$HOME/ardupilot/Tools/autotest
 export PATH=/usr/lib/ccache:$PATH
 source /usr/share/gazebo/setup.sh
-export GAZEBO_MODEL_PATH=~/drone_ws/src/ardupilot_gazebo/models
+export GAZEBO_MODEL_PATH=~/ardupilot_gazebo/models
+
+GAZEBO_MODEL_PATH=~/drone_ws/src/ardupilot_gazebo/models
 ```
 
 ### Running Simulation
