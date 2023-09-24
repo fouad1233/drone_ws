@@ -146,12 +146,12 @@
           </clip>
         </camera>
         <always_on>1</always_on>
-        <update_rate>30</update_rate>
+        <update_rate>60</update_rate>
         <visualize>1</visualize>
         <plugin name="camera_controller" filename="libgazebo_ros_camera.so">
           <robotNamespace>roscam</robotNamespace>
           <alwaysOn>true</alwaysOn>
-          <updateRate>0.0</updateRate>
+          <updateRate>60</updateRate>
           <cameraName>cam</cameraName>
           <imageTopicName>image_raw</imageTopicName>
           <cameraInfoTopicName>camera_info</cameraInfoTopicName>
