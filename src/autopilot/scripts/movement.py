@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 from dronekit import connect, VehicleMode, LocationGlobalRelative, LocationGlobal, Command
 import time, math
 from pymavlink import mavutil

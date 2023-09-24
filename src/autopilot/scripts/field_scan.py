@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 from dronekit import connect, VehicleMode, LocationGlobalRelative, Command
 import dronekit
 import time
