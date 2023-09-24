@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 from dronekit import connect, VehicleMode, Command
 import time
 from pymavlink import mavutil
