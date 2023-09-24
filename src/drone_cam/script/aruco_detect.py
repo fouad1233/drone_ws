@@ -10,24 +10,25 @@ class ReceiveImage:
   def __init__(self):
     self.bridge = CvBridge()
     self.image_sub = rospy.Subscriber("/roscam/cam/image_raw",Image,self.callback)
-
+    self.aruco_detection = ArucoDetection()
   def callback(self,data):
     try:
       cv_image = self.bridge.imgmsg_to_cv2(data, "bgr8")
     except CvBridgeError as e:
       print(e)
-
-    cv2.imshow("Image window", cv_image)
+    self.aruco_image = self.aruco_detection.detect_aruco(cv_image)[0]
+    cv2.imshow("Image window", self.aruco_image)
     #if q pressed, exit
     if cv2.waitKey(1) & 0xFF == ord('q'):
       sys.exit(0)
 class ArucoDetection():
-    def __init__(self, image, markerSize=6, totalMarkers=250,draw=True):
-        self.image = image
+    def __init__(self, markerSize=4, totalMarkers=50,draw=True):
+        self.image = None
         key = getattr(cv2.aruco,f'DICT_{markerSize}X{markerSize}_{totalMarkers}' )
-        self.arucoDict = cv2.aruco.Dictionary_get(key)
-        self.arucoParams = cv2.aruco.DetectorParameters_create()
-    def detect_aruco(self):
+        self.arucoDict = cv2.aruco.getPredefinedDictionary(key)
+        self.arucoParams = cv2.aruco.DetectorParameters()
+    def detect_aruco(self,image):
+        self.image = image
         (corners, ids, rejected) = cv2.aruco.detectMarkers(self.image, self.arucoDict, parameters=self.arucoParams)
         print(corners, ids, rejected)
         if len(corners) > 0:
@@ -60,4 +61,13 @@ class ArucoDetection():
                     0.5, (0 ,255, 0), 2)
             return self.image,cX,cY
         return self.image,None,None
+
+if __name__ == '__main__':
+    rospy.init_node('aruco_detect', anonymous=True)
+    receive_image = ReceiveImage()
+    try:
+        rospy.spin()
+    except KeyboardInterrupt:
+        print("Shutting down")
+    cv2.destroyAllWindows()
     
