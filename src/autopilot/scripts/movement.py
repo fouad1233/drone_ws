@@ -1,14 +1,18 @@
 #!/usr/bin/env python3
 from dronekit import connect, VehicleMode, LocationGlobalRelative, LocationGlobal, Command
+import dronekit
 import time, math
 from pymavlink import mavutil
 
 #drone = connect('127.0.0.1:14550', wait_ready=False)
 
 class Control:
-    def __init__(self, drone):
+    def __init__(self, drone:dronekit.Vehicle):
         self.drone = drone
         command = self.drone.commands
+        self.x = 0
+        self.y = 0
+        self.z = 0
 
     def arm(self):
         if not self.drone.is_armable:
@@ -205,6 +209,60 @@ class Control:
             bearing += 360.00
         return bearing
 
+    def go_in_x_cm(self,cm):
+        self.x = self.x + cm/100
+        self.goto_position_target_local_ned(self.x,self.y,-self.z)
+        #wait until drone reaches the target
+        while True:
+            current_x = self.drone.location.local_frame.north
+            if current_x > self.x-0.1 and current_x < self.x+0.1:
+                break
+            time.sleep(0.5)
+    def go_in_y_cm(self,cm):
+        self.y = self.y + cm/100
+        self.goto_position_target_local_ned(self.x,self.y,-self.z)
+    def go_in_z_cm(self,cm):
+        self.z = self.z + cm/100
+        self.goto_position_target_local_ned(self.x,self.y,-self.z)
+    def go_in_x_y_z_cm(self,x_cm,y_cm,z_cm):
+        self.x = self.x + x_cm/100
+        self.y = self.y + y_cm/100
+        self.z = self.z + z_cm/100
+        self.goto_position_target_local_ned(self.x,self.y,-self.z)
+        
+    def go_in_x_m(self,m):
+        self.x = self.x + m
+        self.goto_position_target_local_ned(self.x,self.y,-self.z)
+        #wait until drone reaches the target
+        while True:
+            current_x = self.drone.location.local_frame.north
+            if current_x > self.x-0.1 and current_x < self.x+0.1:
+                break
+            time.sleep(0.5)
+    def go_in_y_m(self,m):
+        self.y = self.y + m
+        self.goto_position_target_local_ned(self.x,self.y,-self.z)
+        #wait until drone reaches the target
+        while True:
+            current_y = self.drone.location.local_frame.east
+            if current_y > self.y-0.1 and current_y < self.y+0.1:
+                break
+            time.sleep(0.5)
+    def go_in_z_m(self,m):
+        self.z = self.z + m
+        self.goto_position_target_local_ned(self.x,self.y,-self.z)
+        #wait until drone reaches the target
+        while True:
+            current_z = self.drone.location.local_frame.down
+            if current_z > self.z-0.1 and current_z < self.z+0.1:
+                break
+            time.sleep(0.5)
+    def go_in_x_y_z_m(self,x_m,y_m,z_m):
+        self.x = self.x + x_m
+        self.y = self.y + y_m
+        self.z = self.z + z_m
+        self.goto_position_target_local_ned(self.x,self.y,-self.z)
+    
 
 def main():
     drone = connect('127.0.0.1:14550', wait_ready=False)

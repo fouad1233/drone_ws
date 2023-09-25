@@ -114,3 +114,6 @@ erhangk@erhan-Acer:~$ rostopic list
 /rosout
 /rosout_agg
 ```
+
+
+`it must be installed with "pip3 installed imagemagick" because of using generate_marker_model.py`
