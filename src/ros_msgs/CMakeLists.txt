@@ -59,6 +59,7 @@ add_service_files(
   FILES
   ComputeDiskArea.srv
   LedPanel.srv
+  PIDService.srv
 )
 
 ## Generate actions in the 'action' folder

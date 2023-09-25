@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 import rospy
+from ros_msgs.srv import PIDService
 
 class PIDController:
     def __init__(self,Kp:float = 0, Ki:float = 0, Kd:float = 0,Ku:float = None,Tu:float = None, Imax = 0 , alpha:float = 0.15, sampleRate:int = 50):
         """PID Controller Class
-
         Args:
             Ku (float, optional): For Ziegler-Nichols method. Defaults to None.
             Tu (float, optional): For Ziegler-Nichols method. Defaults to None.
@@ -16,8 +16,7 @@ class PIDController:
                 rate = rospy.Rate(sampleRate) # Set a publish rate of 50 Hz
             In the loop:
                 rate.sleep() # Make sure the publish rate maintains at 50 Hz
-        """
-        
+        """        
         self.Kp = Kp
         self.Ki = Ki
         self.Kd = Kd
@@ -124,3 +123,24 @@ class PIDController:
     def setSampleRate(self,sampleRate):
         self.sampleRate = sampleRate
         self.sampleTime = 1/sampleRate
+        
+class PIDNode:
+    def __init_(self):
+        rospy.init_node("PID_controller")
+        rospy.loginfo("PID controller initialized")
+        self.pid_x = PIDController(Kp=1,Ki=0,Kd=0)
+        self.pid_y = PIDController(Kp=1,Ki=0,Kd=0)
+        self.pid_yaw = PIDController(Kp=1,Ki=0,Kd=0)
+
+        self.pid_service = rospy.Service("pid_service",PIDService,self.handle_pid_service)
+        rospy.loginfo("PID service initialized")
+    
+    def handle_pid_service(self,req: PIDService):
+        return self.pid_x.get_pid(req.x), self.pid_y.get_pid(req.y), self.pid_yaw.get_pid(req.yaw)
+        
+def main():
+    node = PIDNode()
+    rospy.spin()
+        
+if __name__ == "__main__":
+    main()

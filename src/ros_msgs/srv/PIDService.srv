@@ -1,0 +1,8 @@
+float64 ErrorX
+float64 ErrorY
+float64 ErrorYaw
+---
+float64 PIDerrorX
+float64 PIDerrorY
+float64 PIDerrorYaw
+
