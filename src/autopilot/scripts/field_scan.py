@@ -27,7 +27,7 @@ class FieldScan():
         self.control.go_in_y_m(-y)
     def field_scan(self):
         if(self.control.arm()):
-            altitude = 4
+            altitude = 2
             time.sleep(2)
             self.control.takeoff(altitude)
             time.sleep(2)
