@@ -12,28 +12,27 @@ class FieldScan():
         self.command.clear()
         
     
-    def takeoff(self,altitude):
-        self.control.z = altitude
-        self.drone.simple_takeoff(altitude)
-        current_altitude = self.drone.location.global_relative_frame.alt
-        while current_altitude < altitude*0.9:
-            current_altitude = self.drone.location.global_relative_frame.alt
-            print(f"Taking off ({current_altitude}m)")
-            time.sleep(1)
+    
     def add_waypoint(self,latitude,longitude,altitude):
         self.command.add(Command(0,0,0,mavutil.mavlink.MAV_FRAME_GLOBAL_RELATIVE_ALT,mavutil.mavlink.MAV_CMD_NAV_WAYPOINT,0,0,0,0,0,0,latitude,longitude,altitude))
     def rtl(self):
         self.command.add(Command(0,0,0,mavutil.mavlink.MAV_FRAME_GLOBAL_RELATIVE_ALT,mavutil.mavlink.MAV_CMD_NAV_RETURN_TO_LAUNCH,0,0,0,0,0,0,0,0,0))
+    def scan_rectangle_m(self,x,y):
+        self.control.go_in_y_m(y)
+        self.control.go_in_x_m(x)
+        self.control.go_in_y_m(-2*y)
+        self.control.go_in_x_m(-2*x)
+        self.control.go_in_y_m(2*y)
+        self.control.go_in_x_m(x)
+        self.control.go_in_y_m(-y)
     def field_scan(self):
         if(self.control.arm()):
             altitude = 4
             time.sleep(2)
-            self.takeoff(altitude)
+            self.control.takeoff(altitude)
             time.sleep(2)
             self.drone.mode = VehicleMode("GUIDED")
-            self.control.go_in_y_m(5)
-            self.control.go_in_x_m(5)
-            self.control.go_in_y_m(-10)
+            self.scan_rectangle_m(10,10)
             self.drone.mode = VehicleMode("RTL")
             print("Returning to launch")
             time.sleep(10)

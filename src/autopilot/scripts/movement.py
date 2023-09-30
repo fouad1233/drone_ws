@@ -17,7 +17,7 @@ class Control:
         if not self.drone.is_armable:
             print("Drone is not armable")
             time.sleep(1)
-            return
+            return False
         
         print("Drone is armable")
         self.drone.mode = VehicleMode("GUIDED")
@@ -29,9 +29,10 @@ class Control:
             print("Drone is getting armed")
             time.sleep(0.5)
         print("Drone armed")
+        return True
         
     def takeoff(self, altitude):
-        
+        self.z = altitude
         self.drone.simple_takeoff(altitude)
         current_altitude = self.drone.location.global_relative_frame.alt
         while current_altitude < altitude*0.9:
