@@ -1,3 +1,4 @@
+string RequestType
 float64 ErrorX
 float64 ErrorY
 float64 ErrorYaw

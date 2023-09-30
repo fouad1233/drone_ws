@@ -1,14 +1,15 @@
 #!/usr/bin/env python3
 import rospy
 from ros_msgs.srv import PIDService
+import matplotlib.pyplot as plt
 
 class PIDController:
     def __init__(self,Kp:float = 0, Ki:float = 0, Kd:float = 0,Ku:float = None,Tu:float = None, Imax = 0 , alpha:float = 0.15, sampleRate:int = 50):
         """PID Controller Class
         Args:
-            Ku (float, optional): For Ziegler-Nichols method. Defaults to None.
-            Tu (float, optional): For Ziegler-Nichols method. Defaults to None.
-            sampleRate (int, optional): should be in hz format. Defaults to 50.
+            Ku (float, optional): For Ziegler-Nichols method. Default is None.
+            Tu (float, optional): For Ziegler-Nichols method. Default is None.
+            sampleRate (int, optional): should be in hz format. Default is 50.
             
         Description:
             For loop frequency use this:
@@ -29,14 +30,12 @@ class PIDController:
         self.ITerm = 0
         self.DTerm = 0
         
-        self.prevPTerm = 0
-        self.prevITerm = 0
-        self.prevDTerm = 0
-        
         self.Imax = Imax
         
         self.error = 0
         self.prevError = 0
+        self.errorLog = []
+        self.time_values = []
         
         self.alpha = alpha
         
@@ -74,7 +73,9 @@ class PIDController:
         self.getITerm(error,self.sampleTime)
         self.getDTerm(error,self.sampleTime)
         
-        self.prevError = error
+        self.errorLog.append(error)
+        self.time_values.append(rospy.get_time())
+        self.prevError = 0
         
         return self.PTerm + self.ITerm + self.DTerm
     
@@ -97,19 +98,16 @@ class PIDController:
     
     def getPTerm(self,error):
         self.PTerm = self.Kp * error
-        self.prevPTerm = self.PTerm
         
     def getITerm(self,error,sampleTime):
-        self.ITerm = self.prevITerm + self.Ki * (error + self.prevError) * sampleTime / 2
+        self.ITerm += self.Ki * (error + self.prevError) * sampleTime / 2
         if self.ITerm > self.Imax:
             self.ITerm = self.Imax
         elif self.ITerm < -self.Imax:
             self.ITerm = -self.Imax
-        self.prevITerm = self.ITerm
         
     def getDTerm(self,error,sampleTime):
         self.DTerm = self.Kd * (error - self.prevError) / sampleTime
-        self.prevDTerm = self.DTerm
         
     def setKp(self,Kp):
         self.Kp = Kp
@@ -123,6 +121,7 @@ class PIDController:
     def setSampleRate(self,sampleRate):
         self.sampleRate = sampleRate
         self.sampleTime = 1/sampleRate
+
         
 class PIDNode:
     def __init_(self):
@@ -135,8 +134,25 @@ class PIDNode:
         self.pid_service = rospy.Service("pid_service",PIDService,self.handle_pid_service)
         rospy.loginfo("PID service initialized")
     
-    def handle_pid_service(self,req: PIDService):
-        return self.pid_x.get_pid(req.x), self.pid_y.get_pid(req.y), self.pid_yaw.get_pid(req.yaw)
+    def handle_pid_service(self, req: PIDService):
+        if req.request_type == "get":
+            return self.pid_x.get_pid(req.x), self.pid_y.get_pid(req.y), self.pid_yaw.get_pid(req.yaw)
+        elif req.request_type == "plot":
+            # Plot the error values over time
+            plt.plot(self.pid_x.time_values, self.pid_x.errorLog, label='X Error')
+            plt.plot(self.pid_y.time_values, self.pid_y.errorLog, label='Y Error')
+            plt.plot(self.pid_yaw.time_values, self.pid_yaw.errorLog, label='Yaw Error')
+
+            plt.xlabel('Time')
+            plt.ylabel('Error')
+            plt.title('PID Error Over Time')
+            plt.legend()
+            plt.grid(True)
+            try:
+                plt.savefig('~/figures/pid_error_figure.fig')
+            except:
+                rospy.loginfo("Couldn't save the figure")
+            plt.show()
         
 def main():
     node = PIDNode()

@@ -1,0 +1,13 @@
+<launch>
+    <param name="/land_altitude" type="double" value="0.5" /> <!--Once it is at 0.5m it will switch to LAND mode-->
+    <param name="/landing_velocity" type="double" value="0.2" />
+    <param name="/takeoff_altitude" type="double" value="1.0" />
+    <param name="/takeoff_velocity" type="double" value="0.5" />
+
+    <node name="flight_state_handler" pkg="autopilot" type = "flight_state.py" />
+    <node name="cam_publisher" pkg="drone_cam" type = "cam_publisher.py" />
+    <node name="aruco_detector" pkg="drone_cam" type = "aruco_detect.py" />
+    <node name="PID_controller" pkg="autopilot" type = "PID_controller.py" />
+    <node name="field_scan" pkg="autopilot" type = "field_scan.py" />
+
+</launch>

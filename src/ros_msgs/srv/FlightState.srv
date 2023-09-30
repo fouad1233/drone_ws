@@ -1,0 +1,4 @@
+String FlightState
+String RequestType
+---
+bool success

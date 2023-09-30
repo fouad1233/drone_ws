@@ -60,6 +60,7 @@ add_service_files(
   ComputeDiskArea.srv
   LedPanel.srv
   PIDService.srv
+  FlightState.srv
 )
 
 ## Generate actions in the 'action' folder
