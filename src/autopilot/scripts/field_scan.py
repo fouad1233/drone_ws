@@ -4,14 +4,15 @@ import dronekit
 import time
 from pymavlink import mavutil
 import movement
+import rospy
 class FieldScan():
     def __init__(self,drone:dronekit.Vehicle):
+        rospy.init_node('field_scan', anonymous=True)
+        rospy.loginfo("Field scan node started")
         self.drone = drone
         self.control = movement.Control(self.drone)
         self.command = self.drone.commands
         self.command.clear()
-        
-    
     
     def add_waypoint(self,latitude,longitude,altitude):
         self.command.add(Command(0,0,0,mavutil.mavlink.MAV_FRAME_GLOBAL_RELATIVE_ALT,mavutil.mavlink.MAV_CMD_NAV_WAYPOINT,0,0,0,0,0,0,latitude,longitude,altitude))
@@ -25,20 +26,25 @@ class FieldScan():
         self.control.go_in_y_m(2*y)
         self.control.go_in_x_m(x)
         self.control.go_in_y_m(-y)
+    
     def field_scan(self):
         if(self.control.arm()):
-            altitude = 2
+            altitude = 1
             time.sleep(2)
             self.control.takeoff(altitude)
             time.sleep(2)
             self.drone.mode = VehicleMode("GUIDED")
-            self.scan_rectangle_m(10,10)
-            self.drone.mode = VehicleMode("RTL")
-            print("Returning to launch")
-            time.sleep(10)
+            #self.scan_rectangle_m(10,10)
+            self.control.go_in_y_m(10)
+            #self.drone.mode = VehicleMode("RTL")
+            #print("Returning to launch")
+            #time.sleep(10)
             self.drone.close()
-            print("Drone closed")
-if __name__ == "__main__":
+            #print("Drone closed")
+def main():
     drone = connect('127.0.0.1:14550', wait_ready=False)
+    
     field_scan = FieldScan(drone)
     field_scan.field_scan()
+if __name__ == "__main__":
+    main()
