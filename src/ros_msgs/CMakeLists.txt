@@ -51,7 +51,6 @@ find_package(catkin REQUIRED COMPONENTS
 add_message_files(
   FILES
   HardwareStatus.msg
-
 )
 
 ## Generate services in the 'srv' folder
@@ -60,7 +59,6 @@ add_service_files(
   ComputeDiskArea.srv
   LedPanel.srv
   PIDService.srv
-  FlightState.srv
 )
 
 ## Generate actions in the 'action' folder

@@ -4,10 +4,13 @@
     <param name="/takeoff_altitude" type="double" value="1.0" />
     <param name="/takeoff_velocity" type="double" value="0.5" />
 
-    <node name="flight_state_handler" pkg="autopilot" type = "flight_state.py" />
+    <include file="/opt/ros/noetic/share/mavros/launch/apm.launch">
+        <arg name="fcu_url" value="udp://:14550@" />
+    </include>
     <node name="cam_publisher" pkg="drone_cam" type = "cam_publisher.py" />
     <node name="aruco_detector" pkg="drone_cam" type = "aruco_detect.py" />
     <node name="PID_controller" pkg="autopilot" type = "PID_controller.py" />
     <node name="field_scan" pkg="autopilot" type = "field_scan.py" />
+    <node name="main" pkg="autopilot" type = "main.py" />
 
 </launch>
