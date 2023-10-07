@@ -3,11 +3,14 @@ import sys
 import rospy
 import cv2
 from sensor_msgs.msg import Image
+from nav_msgs.msg import Odometry
 from cv_bridge import CvBridge, CvBridgeError
+import math
 
 class ReceiveImage:
     
   def __init__(self):
+    rospy.init_node('aruco_detect', anonymous=True)
     self.bridge = CvBridge()
     self.image_sub = rospy.Subscriber("/roscam/cam/image_raw",Image,self.callback)
     self.aruco_detection = ArucoDetection()
@@ -24,13 +27,21 @@ class ReceiveImage:
 class ArucoDetection():
     def __init__(self, markerSize=4, totalMarkers=50,draw=True):
         self.image = None
+        self.position_sub = rospy.Subscriber("/mavros/global_position/local",Odometry,self.position_callback)
         key = getattr(cv2.aruco,f'DICT_{markerSize}X{markerSize}_{totalMarkers}' )
         self.arucoDict = cv2.aruco.getPredefinedDictionary(key)
         self.arucoParams = cv2.aruco.DetectorParameters()
+        self.fov_x = 62.2
+        self.fov_y = 48.8
+    def position_callback(self,data:Odometry):
+        self.height = data.pose.pose.position.z
+        rospy.loginfo("callback")
+    def pixels_to_meters(self,pixels,fov,res,alt):
+        return pixels*( ( alt * math.tan(math.radians(fov/2)) ) / (res/2) )
     def detect_aruco(self,image):
         self.image = image
         (corners, ids, rejected) = cv2.aruco.detectMarkers(self.image, self.arucoDict, parameters=self.arucoParams)
-        print(corners, ids, rejected)
+        #print(ids)
         if len(corners) > 0:
             # flatten the ArUco IDs list
             ids = ids.flatten()
@@ -59,11 +70,19 @@ class ArucoDetection():
                 cv2.putText(self.image, str(markerID),
                     (topLeft[0], topLeft[1] - 15), cv2.FONT_HERSHEY_SIMPLEX,
                     0.5, (0 ,255, 0), 2)
+                #find the center of the camera and find the distance to the center of marker, return the distance and plot a line between the two
+                image_height,image_width,_ = self.image.shape
+                center_point = (image_width/2,image_height/2)
+                distance_to_center = cX-center_point[0] , cY-center_point[1]
+                #print(distance_to_center)
+                cv2.line(self.image,(int(center_point[0]),int(center_point[1])),(cX,cY),(0,0,255),2)
+                #distance_to_center_meters = (self.pixels_to_meters(distance_to_center[0],self.fov_x,image_width,self.height), self.pixels_to_meters(distance_to_center[1],self.fov_y,image_height,self.height))
+                #print(distance_to_center_meters)
             return self.image,cX,cY
         return self.image,None,None
 
 if __name__ == '__main__':
-    rospy.init_node('aruco_detect', anonymous=True)
+    
     receive_image = ReceiveImage()
     try:
         rospy.spin()
