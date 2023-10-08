@@ -1,99 +1,152 @@
+#!/usr/bin/env python3
+
 import rospy
+import smach
+import time
+import threading
 from std_msgs.msg import String
 from std_srvs.srv import Trigger
-from field_scan import FieldScan
-
+from movement import Control
 
 class RosNode:
     def __init__(self):
-        rospy.init_node('flight_state_handler')
+        rospy.init_node('flight_state_machine')
         self.pub = rospy.Publisher('/flight_state', String, queue_size=10)
-        
-class StateMachine:
-    def __init__(self):
-        self.srv = rospy.Service("/startMain", Trigger, self.server_callback)
-        self.states = {}
-        self.current_state = None
-        self.is_running = False
+        self.srv = rospy.Service("/startFlight", Trigger, self.server_callback)
+        self.sm = smach.StateMachine(outcomes=['aborted'])
+        self.sm.userdata.is_running = False
         
     def server_callback(self, req):
-        self.is_running = True
+        self.sm.userdata.is_running = not self.sm.userdata.is_running
+        rospy.loginfo("Main state machine is running: " + str(self.sm.userdata.is_running))
         return True, "Success"
-
-    def add_state(self, state_name, state):
-        self.states[state_name] = state
-
-    def set_initial_state(self, state_name):
-        if state_name in self.states:
-            self.current_state = self.states[state_name]
-        else:
-            raise ValueError("State does not exist")
-
-    def transition_to(self, state_name):
-        if state_name in self.states:
-            self.current_state = self.states[state_name]
-        elif state_name == "EndState":
-            self.is_running = False
-            self.set_initial_state("ArmState")
-        else:
-            raise ValueError("State does not exist")
-
-    def execute(self):
-        if self.current_state:
-            self.current_state.execute()
-
-
-class ArmState:
-    def execute(self):
-        print("ARM state")
-        
-    def next(self):
-        return "TakeoffState"
-
-class TakeoffState:
-    def execute(self):
-        print("PENDING state")
     
-    def next(self):
-        return "SearchState"
+    def get_sm(self):
+        return self.sm
 
-class SearchState:
-    def execute(self):
-        print("HOVER state")
+class PENDING(smach.State):
+    def __init__(self):
+        smach.State.__init__(self, 
+                             outcomes=['aborted','pending','start'],
+                             input_keys=['isRunning'])
         
-    def next(self):
-        return "LandState"
+    def execute(self,userdata):
+        rospy.loginfo('PENDING')
+        if rospy.is_shutdown():
+            return 'aborted'
+        elif userdata.isRunning:
+            return 'start'
+        else:
+            return 'pending'
+        
+class ARM(smach.State):
+    def __init__(self,control:Control):
+        smach.State.__init__(self, outcomes=['armed','notArmable','failed'])
+        self.control = control
 
-class LandState:
-    def execute(self):
-        print("ONGROUND state")
+    def execute(self,userdata):
+        rospy.loginfo('Executing state ARM')
         
-    def next(self):
-        return "RTLState"
+        if not self.control.drone.is_armable:
+            return 'notArmable'
+        elif self.control.arm():
+            return 'armed'
+        else:
+            return 'failed'
 
-class RTLState:
-    def execute(self):
-        print("LANDED state")
+class TAKEOFF(smach.State):
+    def __init__(self,control:Control):
+        smach.State.__init__(self, outcomes=['tookOff'])
+        self.control = control
+        self.altitude = rospy.get_param('takeoff_altitude',3)
         
-    def next(self):
-        return "EndState"
+    def execute(self,userdata):
+        rospy.loginfo('Executing state TAKEOFF')
+        self.control.takeoff(self.altitude)
+        return 'tookOff'
+
+class SEARCH(smach.State):
+    def __init__(self,control:Control):
+        smach.State.__init__(self, outcomes=['arucoLand'])
+        self.control = control
+        
+    def execute(self,userdata):
+        rospy.loginfo('Executing state SEARCH')
+        self.control.guided()
+        self.control.scan_rectangle_m(10,10)
+        return 'arucoLand'
+    
+class ARUCOLAND(smach.State):
+    def __init__(self,control:Control):
+        smach.State.__init__(self, outcomes=['rtl','search'])
+        self.control = control
+        
+    def execute(self,userdata):
+        rospy.loginfo('Executing state ARUCOLAND')
+        return 'rtl'
+
+class RTL(smach.State):
+    def __init__(self,control:Control):
+        smach.State.__init__(self, outcomes=['pending','aborted'],
+                             input_keys=['isRunning'],
+                             output_keys=['isRunning'])
+        self.control = control
+        
+    def execute(self,userdata):
+        rospy.loginfo('Executing state RTL')
+        self.control.rtl()
+        time.sleep(10)
+        isRunning = userdata.isRunning
+        userdata.isRunning = False
+        if isRunning:
+            return 'pending'
+        else:
+            return 'aborted'
     
 def main():
     node = RosNode()
-    state_machine = StateMachine()
-    state_machine.add_state("ArmState", ArmState())
-    state_machine.add_state("TakeoffState", TakeoffState())
-    state_machine.add_state("SearchState", SearchState())
-    state_machine.add_state("LandState", LandState())
-    state_machine.add_state("RTLState", RTLState())
-    state_machine.set_initial_state("ArmState")
+    sm = node.get_sm()
+    control = Control()
+    with sm:
+        # Add states to the container
+        smach.StateMachine.add('PENDING', PENDING(), 
+                               transitions={'aborted':'aborted',
+                                            'pending':'PENDING', 
+                                            'start':'ARM'},
+                               remapping={'isRunning':'is_running'})
+        smach.StateMachine.add('ARM', ARM(control), 
+                               transitions={'armed':'TAKEOFF', 
+                                            'notArmable':'PENDING',
+                                            'failed':'PENDING'})
+        smach.StateMachine.add('TAKEOFF', TAKEOFF(control), 
+                               transitions={'tookOff':'SEARCH'})
+        smach.StateMachine.add('SEARCH', SEARCH(control), 
+                               transitions={'arucoLand':'ARUCOLAND'})
+        smach.StateMachine.add('ARUCOLAND', ARUCOLAND(control),
+                                 transitions={'search':'SEARCH',
+                                              'rtl':'RTL'})
+        smach.StateMachine.add('RTL', RTL(control),
+                                    transitions={'pending':'PENDING',
+                                                 'aborted': 'aborted'},
+                                    remapping={'isRunning':'is_running'})
+
+    # Execute SMACH plan
+    #outcome = sm.execute()
     
-    while not rospy.is_shutdown():
-        if not state_machine.is_running:
-            pass
-        state_machine.execute()
-        next_state = state_machine.current_state.next()
-        state_machine.transition_to(next_state)
+    # Create a thread to execute the smach container
+    smach_thread = threading.Thread(target=sm.execute)
+    smach_thread.start()
+
+    # Wait for ctrl-c
+    rospy.spin()
+
+    # Request the container to preempt
+    sm.request_preempt()
+
+    # Block until everything is preempted 
+    # (you could do something more complicated to get the execution outcome if you want it)
+    smach_thread.join()
     
+
 if __name__ == "__main__":
     main()

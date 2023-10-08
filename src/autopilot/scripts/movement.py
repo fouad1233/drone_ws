@@ -7,8 +7,11 @@ from pymavlink import mavutil
 #drone = connect('127.0.0.1:14550', wait_ready=False)
 
 class Control:
-    def __init__(self, drone:dronekit.Vehicle):
-        self.drone = drone
+    def __init__(self, drone:dronekit.Vehicle = None):
+        if drone == None:
+            self.drone = connect('127.0.0.1:14550', wait_ready=False)
+        else:
+            self.drone = drone
         command = self.drone.commands
         self.x = 0
         self.y = 0
@@ -40,6 +43,12 @@ class Control:
             current_altitude = self.drone.location.global_relative_frame.alt
             print(f"Taking off ({current_altitude}m)")
             time.sleep(1)
+            
+    def rtl(self):
+        self.drone.mode = VehicleMode("RTL")
+        
+    def guided(self):
+        self.drone.mode = VehicleMode("GUIDED")
         
     def add_mission(self):
         
@@ -219,12 +228,15 @@ class Control:
             if current_x > self.x-0.1 and current_x < self.x+0.1:
                 break
             time.sleep(0.5)
+            
     def go_in_y_cm(self,cm):
         self.y = self.y + cm/100
         self.goto_position_target_local_ned(self.x,self.y,-self.z)
+        
     def go_in_z_cm(self,cm):
         self.z = self.z + cm/100
         self.goto_position_target_local_ned(self.x,self.y,-self.z)
+        
     def go_in_x_y_z_cm(self,x_cm,y_cm,z_cm):
         self.x = self.x + x_cm/100
         self.y = self.y + y_cm/100
@@ -240,6 +252,7 @@ class Control:
             if current_x > self.x-0.1 and current_x < self.x+0.1:
                 break
             time.sleep(0.5)
+            
     def go_in_y_m(self,m):
         self.y = self.y + m
         self.goto_position_target_local_ned(self.x,self.y,-self.z)
@@ -249,6 +262,7 @@ class Control:
             if current_y > self.y-0.1 and current_y < self.y+0.1:
                 break
             time.sleep(0.5)
+            
     def go_in_z_m(self,m):
         self.z = self.z + m
         self.goto_position_target_local_ned(self.x,self.y,-self.z)
@@ -258,11 +272,21 @@ class Control:
             if current_z > self.z-0.1 and current_z < self.z+0.1:
                 break
             time.sleep(0.5)
+            
     def go_in_x_y_z_m(self,x_m,y_m,z_m):
         self.x = self.x + x_m
         self.y = self.y + y_m
         self.z = self.z + z_m
         self.goto_position_target_local_ned(self.x,self.y,-self.z)
+        
+    def scan_rectangle_m(self,x,y):
+        self.go_in_y_m(y)
+        self.go_in_x_m(x)
+        self.go_in_y_m(-2*y)
+        self.go_in_x_m(-2*x)
+        self.go_in_y_m(2*y)
+        self.go_in_x_m(x)
+        self.go_in_y_m(-y)
     
 
 def main():

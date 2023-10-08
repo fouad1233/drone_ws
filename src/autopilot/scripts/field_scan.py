@@ -14,10 +14,6 @@ class FieldScan():
         self.command = self.drone.commands
         self.command.clear()
     
-    def add_waypoint(self,latitude,longitude,altitude):
-        self.command.add(Command(0,0,0,mavutil.mavlink.MAV_FRAME_GLOBAL_RELATIVE_ALT,mavutil.mavlink.MAV_CMD_NAV_WAYPOINT,0,0,0,0,0,0,latitude,longitude,altitude))
-    def rtl(self):
-        self.command.add(Command(0,0,0,mavutil.mavlink.MAV_FRAME_GLOBAL_RELATIVE_ALT,mavutil.mavlink.MAV_CMD_NAV_RETURN_TO_LAUNCH,0,0,0,0,0,0,0,0,0))
     def scan_rectangle_m(self,x,y):
         self.control.go_in_y_m(y)
         self.control.go_in_x_m(x)
