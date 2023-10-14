@@ -1,15 +1,25 @@
 <launch>
-    <param name="/land_altitude" type="double" value="0.5" /> <!--Once it is at 0.5m it will switch to LAND mode-->
+    <arg name="mode" value="sim" doc="Set to 'sim' for simulation, 'real' for real hardware" />
+    <arg name="fcu_url" default="udp://127.0.0.1:14550@" if="$(eval arg('mode') == 'sim')"/> 
+    <arg name="fcu_url" default="/dev/ttyAMA0:230400" if="$(eval arg('mode') == 'real')"/> <!-- Set url and baudrate-->
+    
+    <param name="/mode" type="string" value="$(arg mode)" />
+    <param name="/fcu_url" type="string" value="127.0.0.1:14550" if="$(eval arg('mode') == 'sim')"/>
+    <param name="/fcu_url" type="string" value="$(arg fcu_url)" if="$(eval arg('mode') == 'real')"/>
+    <param name="/baudrate" type="int" value="57600" if="$(eval arg('mode') == 'real')" />
+
+    <param name="/land_altitude" type="double" value="0.5" />
     <param name="/landing_velocity" type="double" value="0.2" />
     <param name="/takeoff_altitude" type="double" value="3.0" />
     <param name="/takeoff_velocity" type="double" value="0.5" />
 
-    <include file="/opt/ros/noetic/share/mavros/launch/apm.launch">
-        <arg name="fcu_url" value="udp://:14550@" />
+    <!-- Mavros Node-->
+    <include file="$(find mavros)/launch/apm.launch">
+        <arg name="fcu_url" value="$(arg fcu_url)" />
     </include>
-    <node name="cam_publisher" pkg="drone_cam" type = "cam_publisher.py" />
-    <node name="aruco_detector" pkg="drone_cam" type = "aruco_detect.py" />
-    <node name="PID_controller" pkg="autopilot" type = "PID_controller.py" />
-    <node name="main" pkg="autopilot" type = "main.py" />
 
+    <node name="cam_publisher" pkg="drone_cam" type="cam_publisher.py" output="screen" if="$(eval arg('mode') == 'real')" />
+
+    <node name="aruco_detector" pkg="drone_cam" type="aruco_detect.py" output="screen" />
+    <!--<node name="main" pkg="autopilot" type="main.py" output="screen" />-->
 </launch>

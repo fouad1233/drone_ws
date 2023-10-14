@@ -3,41 +3,48 @@ import sys
 import rospy
 import cv2
 from sensor_msgs.msg import Image
-from nav_msgs.msg import Odometry
+#from nav_msgs.msg import Odometry
+from geometry_msgs.msg import PoseStamped
 from cv_bridge import CvBridge, CvBridgeError
 import math
 
 class ReceiveImage:
-    
-  def __init__(self):
-    rospy.init_node('aruco_detect', anonymous=True)
-    self.bridge = CvBridge()
-    self.image_sub = rospy.Subscriber("/roscam/cam/image_raw",Image,self.callback)
-    self.aruco_detection = ArucoDetection()
-  def callback(self,data):
-    try:
-      cv_image = self.bridge.imgmsg_to_cv2(data, "bgr8")
-    except CvBridgeError as e:
-      print(e)
-    self.aruco_image = self.aruco_detection.detect_aruco(cv_image)[0]
-    cv2.imshow("Image window", self.aruco_image)
-    #if q pressed, exit
-    if cv2.waitKey(1) & 0xFF == ord('q'):
-      sys.exit(0)
+    def __init__(self):
+        rospy.init_node('aruco_detect', anonymous=True)
+        self.bridge = CvBridge()
+        self.image_sub = rospy.Subscriber("/roscam/cam/image_raw",Image,self.callback)
+        self.aruco_detection = ArucoDetection()
+    def callback(self,data):
+        try:
+            cv_image = self.bridge.imgmsg_to_cv2(data, "bgr8")
+        except CvBridgeError as e:
+            print(e)
+        self.aruco_image = self.aruco_detection.detect_aruco(cv_image)[0]
+        cv2.imshow("Image window", self.aruco_image)
+        #if q pressed, exit
+        if cv2.waitKey(1) & 0xFF == ord('q'):
+            sys.exit(0)
 class ArucoDetection():
     def __init__(self, markerSize=4, totalMarkers=50,draw=True):
         self.image = None
-        self.position_sub = rospy.Subscriber("/mavros/global_position/local",Odometry,self.position_callback)
+        self.position_sub = rospy.Subscriber("/mavros/local_position/pose",PoseStamped,self.position_callback)
         key = getattr(cv2.aruco,f'DICT_{markerSize}X{markerSize}_{totalMarkers}' )
         self.arucoDict = cv2.aruco.getPredefinedDictionary(key)
         self.arucoParams = cv2.aruco.DetectorParameters()
         self.fov_x = 62.2
         self.fov_y = 48.8
-    def position_callback(self,data:Odometry):
-        self.height = data.pose.pose.position.z
-        rospy.loginfo("callback")
+        
+    def position_callback(self,data:PoseStamped):
+        self.height = data.pose.position.z
+
     def pixels_to_meters(self,pixels,fov,res,alt):
         return pixels*( ( alt * math.tan(math.radians(fov/2)) ) / (res/2) )
+    
+    """
+    def pixels_to_meters(self,pixels,fov,res,alt):
+        return alt * math.tan(math.radians(fov/2)) * (2 * pixels / res)
+        #x_distance = (altitude * tan(FOV_horizontal / 2)) * (2 * delta_x / image_width)
+    """
     def detect_aruco(self,image):
         self.image = image
         (corners, ids, rejected) = cv2.aruco.detectMarkers(self.image, self.arucoDict, parameters=self.arucoParams)
@@ -76,8 +83,8 @@ class ArucoDetection():
                 distance_to_center = cX-center_point[0] , cY-center_point[1]
                 #print(distance_to_center)
                 cv2.line(self.image,(int(center_point[0]),int(center_point[1])),(cX,cY),(0,0,255),2)
-                #distance_to_center_meters = (self.pixels_to_meters(distance_to_center[0],self.fov_x,image_width,self.height), self.pixels_to_meters(distance_to_center[1],self.fov_y,image_height,self.height))
-                #print(distance_to_center_meters)
+                distance_to_center_meters = (self.pixels_to_meters(distance_to_center[0],self.fov_x,image_width,self.height), self.pixels_to_meters(distance_to_center[1],self.fov_y,image_height,self.height))
+                rospy.loginfo(distance_to_center_meters)
             return self.image,cX,cY
         return self.image,None,None
 
@@ -89,4 +96,3 @@ if __name__ == '__main__':
     except KeyboardInterrupt:
         print("Shutting down")
     cv2.destroyAllWindows()
-    

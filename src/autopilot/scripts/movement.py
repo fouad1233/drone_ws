@@ -2,21 +2,20 @@
 from dronekit import connect, VehicleMode, LocationGlobalRelative, LocationGlobal, Command
 import dronekit
 import time, math
+import argparse
 from pymavlink import mavutil
 
-#drone = connect('127.0.0.1:14550', wait_ready=False)
-
 class Control:
-    def __init__(self, drone:dronekit.Vehicle = None):
-        if drone == None:
-            self.drone = connect('127.0.0.1:14550', wait_ready=False)
-        else:
-            self.drone = drone
-        command = self.drone.commands
+    def __init__(self, drone_url='127.0.0.1:14550', baudrate=115200):
+        self.drone = connect(drone_url, wait_ready=False, baud=baudrate)
+        self.command = self.drone.commands
         self.x = 0
         self.y = 0
         self.z = 0
-
+    
+    def get_drone_obj(self):
+        return self.drone
+    
     def arm(self):
         if not self.drone.is_armable:
             print("Drone is not armable")
@@ -290,8 +289,7 @@ class Control:
     
 
 def main():
-    drone = connect('127.0.0.1:14550', wait_ready=False)
-    control = Control(drone)
+    control = Control()
     control.arm()
     control.takeoff(10)
     control.goto_position_target_local_ned(5,5,-15)

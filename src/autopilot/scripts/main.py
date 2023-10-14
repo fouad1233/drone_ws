@@ -29,15 +29,16 @@ class PENDING(smach.State):
         smach.State.__init__(self, 
                              outcomes=['aborted','pending','start'],
                              input_keys=['isRunning'])
+        self.rate = rospy.Rate(1)
         
     def execute(self,userdata):
-        rospy.loginfo('PENDING')
-        if rospy.is_shutdown():
-            return 'aborted'
-        elif userdata.isRunning:
-            return 'start'
-        else:
-            return 'pending'
+        #rospy.loginfo('PENDING')
+        while True:
+            if rospy.is_shutdown():
+                return 'aborted'
+            elif userdata.isRunning:
+                return 'start'
+            self.rate.sleep()
         
 class ARM(smach.State):
     def __init__(self,control:Control):
@@ -45,7 +46,7 @@ class ARM(smach.State):
         self.control = control
 
     def execute(self,userdata):
-        rospy.loginfo('Executing state ARM')
+        #rospy.loginfo('Executing state ARM')
         
         if not self.control.drone.is_armable:
             return 'notArmable'
@@ -61,7 +62,7 @@ class TAKEOFF(smach.State):
         self.altitude = rospy.get_param('takeoff_altitude',3)
         
     def execute(self,userdata):
-        rospy.loginfo('Executing state TAKEOFF')
+        #rospy.loginfo('Executing state TAKEOFF')
         self.control.takeoff(self.altitude)
         return 'tookOff'
 
@@ -71,7 +72,7 @@ class SEARCH(smach.State):
         self.control = control
         
     def execute(self,userdata):
-        rospy.loginfo('Executing state SEARCH')
+        #rospy.loginfo('Executing state SEARCH')
         self.control.guided()
         self.control.scan_rectangle_m(10,10)
         return 'arucoLand'
@@ -82,7 +83,7 @@ class ARUCOLAND(smach.State):
         self.control = control
         
     def execute(self,userdata):
-        rospy.loginfo('Executing state ARUCOLAND')
+        #rospy.loginfo('Executing state ARUCOLAND')
         return 'rtl'
 
 class RTL(smach.State):
@@ -93,7 +94,7 @@ class RTL(smach.State):
         self.control = control
         
     def execute(self,userdata):
-        rospy.loginfo('Executing state RTL')
+        #rospy.loginfo('Executing state RTL')
         self.control.rtl()
         time.sleep(10)
         isRunning = userdata.isRunning
@@ -105,8 +106,8 @@ class RTL(smach.State):
     
 def main():
     node = RosNode()
+    control = Control(rospy.get_param("fcu_url"),rospy.get_param("baudrate", 115200))
     sm = node.get_sm()
-    control = Control()
     with sm:
         # Add states to the container
         smach.StateMachine.add('PENDING', PENDING(), 
@@ -142,6 +143,7 @@ def main():
 
     # Request the container to preempt
     sm.request_preempt()
+    
 
     # Block until everything is preempted 
     # (you could do something more complicated to get the execution outcome if you want it)
