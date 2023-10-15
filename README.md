@@ -115,5 +115,13 @@ erhangk@erhan-Acer:~$ rostopic list
 /rosout_agg
 ```
 
+It must be installed with "pip3 installed imagemagick" because of using generate_marker_model.py
 
-`it must be installed with "pip3 installed imagemagick" because of using generate_marker_model.py`
+In order to avoid conflict between MAVROS and Dronekit, instance of `start_ardupilot.sh` should be like this:
+
+`cd ~/ardupilot/ArduCopter ../Tools/autotest/sim_vehicle.py -f gazebo-iris --console --map  --out=udp:127.0.0.1:14551`
+
+If you are not going to use MAVROS you can use this:
+
+`cd ~/ardupilot/ArduCopter
+../Tools/autotest/sim_vehicle.py -f gazebo-iris --console --map`
