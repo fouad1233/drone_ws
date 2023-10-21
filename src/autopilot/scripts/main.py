@@ -4,7 +4,7 @@ import rospy
 import smach
 import time
 import threading
-from std_msgs.msg import String
+from std_msgs.msg import String, Bool
 from std_srvs.srv import Trigger
 from movement import Control
 
@@ -13,9 +13,12 @@ class RosNode:
         rospy.init_node('flight_state_machine')
         self.pub = rospy.Publisher('/flight_state', String, queue_size=10)
         self.srv = rospy.Service("/startFlight", Trigger, self.server_callback)
+        self.aruco_find_sub = rospy.Subscriber("/aruco_find",Bool,self.aruco_find_callback)
         self.sm = smach.StateMachine(outcomes=['aborted'])
         self.sm.userdata.is_running = False
-        
+    def aruco_find_callback(self,data:Bool):
+        if data.data == True:
+            rospy.loginfo("Aruco found")
     def server_callback(self, req):
         self.sm.userdata.is_running = not self.sm.userdata.is_running
         rospy.loginfo("Main state machine is running: " + str(self.sm.userdata.is_running))
