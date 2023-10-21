@@ -6,7 +6,7 @@ import time
 import threading
 from std_msgs.msg import String
 from std_srvs.srv import Trigger
-from movement import Control
+from vehicle import Vehicle
 
 class RosNode:
     def __init__(self):
@@ -41,66 +41,60 @@ class PENDING(smach.State):
             self.rate.sleep()
         
 class ARM(smach.State):
-    def __init__(self,control:Control):
+    def __init__(self,vehicle:Vehicle):
         smach.State.__init__(self, outcomes=['armed','notArmable','failed'])
-        self.control = control
+        self.vehicle = vehicle
 
     def execute(self,userdata):
         #rospy.loginfo('Executing state ARM')
         
-        if not self.control.drone.is_armable:
-            return 'notArmable'
-        elif self.control.arm():
+        if self.vehicle.arm():
             return 'armed'
         else:
             return 'failed'
 
 class TAKEOFF(smach.State):
-    def __init__(self,control:Control):
+    def __init__(self,vehicle:Vehicle):
         smach.State.__init__(self, outcomes=['tookOff'])
-        self.control = control
+        self.vehicle = vehicle
         self.altitude = rospy.get_param('takeoff_altitude',3)
         
     def execute(self,userdata):
         #rospy.loginfo('Executing state TAKEOFF')
-        self.control.takeoff(self.altitude)
+        self.vehicle.takeoff(self.altitude,10)
         return 'tookOff'
 
 class SEARCH(smach.State):
-    def __init__(self,control:Control):
+    def __init__(self,vehicle:Vehicle):
         smach.State.__init__(self, outcomes=['arucoLand'])
-        self.control = control
+        self.vehicle = vehicle
         
     def execute(self,userdata):
         #rospy.loginfo('Executing state SEARCH')
-        self.control.guided()
-        search_thread = threading.Thread(target=self.control.scan_rectangle_m(10,10))
-        search_thread.start()
-        if self.control.aruco_land():
-            return 'arucoLand'
-        
-
+        self.vehicle.guided()
+        self.vehicle.scan_rectangle_m(10,10)
+        return 'arucoLand'
     
 class ARUCOLAND(smach.State):
-    def __init__(self,control:Control):
+    def __init__(self,vehicle:Vehicle):
         smach.State.__init__(self, outcomes=['rtl','search'])
-        self.control = control
+        self.vehicle = vehicle
         
     def execute(self,userdata):
         #rospy.loginfo('Executing state ARUCOLAND')
         return 'rtl'
 
 class RTL(smach.State):
-    def __init__(self,control:Control):
+    def __init__(self,vehicle:Vehicle):
         smach.State.__init__(self, outcomes=['pending','aborted'],
                              input_keys=['isRunning'],
                              output_keys=['isRunning'])
-        self.control = control
+        self.vehicle = vehicle
         
     def execute(self,userdata):
         #rospy.loginfo('Executing state RTL')
-        self.control.rtl()
-        time.sleep(10)
+        self.vehicle.rtl()
+        rospy.Rate(1/10).sleep()
         isRunning = userdata.isRunning
         userdata.isRunning = False
         if isRunning:
@@ -110,7 +104,7 @@ class RTL(smach.State):
     
 def main():
     node = RosNode()
-    control = Control(rospy.get_param("fcu_url"),rospy.get_param("baudrate", 115200))
+    vehicle = Vehicle()
     sm = node.get_sm()
     with sm:
         # Add states to the container
@@ -119,18 +113,18 @@ def main():
                                             'pending':'PENDING', 
                                             'start':'ARM'},
                                remapping={'isRunning':'is_running'})
-        smach.StateMachine.add('ARM', ARM(control), 
+        smach.StateMachine.add('ARM', ARM(vehicle), 
                                transitions={'armed':'TAKEOFF', 
                                             'notArmable':'PENDING',
                                             'failed':'PENDING'})
-        smach.StateMachine.add('TAKEOFF', TAKEOFF(control), 
+        smach.StateMachine.add('TAKEOFF', TAKEOFF(vehicle), 
                                transitions={'tookOff':'SEARCH'})
-        smach.StateMachine.add('SEARCH', SEARCH(control), 
+        smach.StateMachine.add('SEARCH', SEARCH(vehicle), 
                                transitions={'arucoLand':'ARUCOLAND'})
-        smach.StateMachine.add('ARUCOLAND', ARUCOLAND(control),
+        smach.StateMachine.add('ARUCOLAND', ARUCOLAND(vehicle),
                                  transitions={'search':'SEARCH',
                                               'rtl':'RTL'})
-        smach.StateMachine.add('RTL', RTL(control),
+        smach.StateMachine.add('RTL', RTL(vehicle),
                                     transitions={'pending':'PENDING',
                                                  'aborted': 'aborted'},
                                     remapping={'isRunning':'is_running'})
