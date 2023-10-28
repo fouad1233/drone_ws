@@ -1,0 +1,9 @@
+#goal         
+float64 altitude
+float64 timeout
+---
+#result
+bool result
+---
+#feedback
+float64 percentage

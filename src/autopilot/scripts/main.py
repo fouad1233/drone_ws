@@ -16,9 +16,13 @@ class RosNode:
         self.aruco_find_sub = rospy.Subscriber("/aruco_find",Bool,self.aruco_find_callback)
         self.sm = smach.StateMachine(outcomes=['aborted'])
         self.sm.userdata.is_running = False
+        self.aruco_found = False
+        
     def aruco_find_callback(self,data:Bool):
         if data.data == True:
             rospy.loginfo("Aruco found")
+            self.aruco_found = True
+            
     def server_callback(self, req):
         self.sm.userdata.is_running = not self.sm.userdata.is_running
         rospy.loginfo("Main state machine is running: " + str(self.sm.userdata.is_running))
@@ -70,19 +74,24 @@ class TAKEOFF(smach.State):
         return 'tookOff'
 
 class SEARCH(smach.State):
-    def __init__(self,control:Control):
+    def __init__(self,control:Control,node:RosNode):
         smach.State.__init__(self, outcomes=['arucoLand'])
         self.control = control
+        self.rosnode = node
         
     def execute(self,userdata):
         #rospy.loginfo('Executing state SEARCH')
         self.control.guided()
-        search_thread = threading.Thread(target=self.control.scan_rectangle_m(10,10))
+        search_thread = threading.Thread(target=self.control.scan_rectangle_m,args=(10,10))
         search_thread.start()
-        if self.control.aruco_land():
-            return 'arucoLand'
-        
-
+        rate = rospy.Rate(10)
+        while True:
+            rospy.loginfo("inside loooooooooooooooooooooooooooooooooooooop")
+            if self.rosnode.aruco_found:
+                rospy.loginfo("Aruco found")
+                search_thread.join()
+                return 'arucoLand'
+            rate.sleep()
     
 class ARUCOLAND(smach.State):
     def __init__(self,control:Control):
@@ -128,7 +137,7 @@ def main():
                                             'failed':'PENDING'})
         smach.StateMachine.add('TAKEOFF', TAKEOFF(control), 
                                transitions={'tookOff':'SEARCH'})
-        smach.StateMachine.add('SEARCH', SEARCH(control), 
+        smach.StateMachine.add('SEARCH', SEARCH(control,node), 
                                transitions={'arucoLand':'ARUCOLAND'})
         smach.StateMachine.add('ARUCOLAND', ARUCOLAND(control),
                                  transitions={'search':'SEARCH',

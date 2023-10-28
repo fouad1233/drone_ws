@@ -1,0 +1,9 @@
+#goal         
+float64 x
+float64 y
+---
+#result
+bool result
+---
+#feedback
+float64 percentage

@@ -3,7 +3,7 @@ import sys
 import rospy
 import cv2
 from sensor_msgs.msg import Image
-from std_msgs.msg import Bool
+from std_msgs.msg import Bool, Int8
 #from nav_msgs.msg import Odometry
 from geometry_msgs.msg import PoseStamped
 from cv_bridge import CvBridge, CvBridgeError
@@ -34,7 +34,8 @@ class ArucoDetection():
         self.arucoParams = cv2.aruco.DetectorParameters()
         self.fov_x = 62.2
         self.fov_y = 48.8
-        self.aruco_find_pub = rospy.Publisher("/aruco_find",Bool,queue_size=10)
+        self.aruco_find_pub = rospy.Publisher("/aruco_find",Int8,queue_size=10)
+        self.aruco_find_state = False
 
         
     def position_callback(self,data:PoseStamped):
@@ -52,6 +53,7 @@ class ArucoDetection():
         self.image = image
         (corners, ids, rejected) = cv2.aruco.detectMarkers(self.image, self.arucoDict, parameters=self.arucoParams)
         #print(ids)
+                
         if len(corners) > 0:
             # flatten the ArUco IDs list
             ids = ids.flatten()
@@ -77,8 +79,7 @@ class ArucoDetection():
                 cY = int((topLeft[1] + bottomRight[1]) / 2.0)
                 cv2.circle(self.image, (cX, cY), 4, (0, 0, 255), -1)
                 # draw the ArUco marker ID on the image
-                if markerID == 2:
-                    self.aruco_find_pub.publish(True)
+                    
                 cv2.putText(self.image, str(markerID),
                     (topLeft[0], topLeft[1] - 15), cv2.FONT_HERSHEY_SIMPLEX,
                     0.5, (0 ,255, 0), 2)
@@ -90,7 +91,18 @@ class ArucoDetection():
                 cv2.line(self.image,(int(center_point[0]),int(center_point[1])),(cX,cY),(0,0,255),2)
                 distance_to_center_meters = (self.pixels_to_meters(distance_to_center[0],self.fov_x,image_width,self.height), self.pixels_to_meters(distance_to_center[1],self.fov_y,image_height,self.height))
                 #rospy.loginfo(distance_to_center_meters)
+                
+                if self.aruco_find_state == False:
+                    self.aruco_find_pub.publish(markerID)
+                    self.aruco_find_state = True
+                
             return self.image,cX,cY
+        
+        else:
+            if self.aruco_find_state == True:
+                self.aruco_find_pub.publish(-1)
+                self.aruco_find_state = False
+                
         return self.image,None,None
 
 if __name__ == '__main__':

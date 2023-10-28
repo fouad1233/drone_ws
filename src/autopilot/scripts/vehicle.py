@@ -1,17 +1,22 @@
 #! /usr/bin/env python3
 
 import rospy
-import math
+import actionlib
+from ros_msgs.msg import act_boolAction, act_stringAction, takeoffAction, scanAction, gotoAction, velocityAction
 from pymavlink import mavutil
 from geometry_msgs.msg import PoseStamped, TwistStamped
+from geographic_msgs.msg import GeoPoseStamped
+
 from mavros_msgs.msg import HomePosition, PositionTarget, State,\
                             WaypointList
-from mavros_msgs.srv import CommandBool, CommandTOL, ParamGet, ParamSet, SetMode, SetModeRequest, WaypointClear, \
+from mavros_msgs.srv import CommandBool, CommandTOL, CommandTOLRequest, ParamGet, ParamSet, SetMode, SetModeRequest, WaypointClear, \
                             WaypointPush
 from sensor_msgs.msg import NavSatFix, Imu
 
 class Vehicle:
     def __init__(self):
+        #rospy.init_node('vehicle', anonymous=True)
+        self.thread_running = True
         self.global_position = NavSatFix()
         self.imu_data = Imu()
         self.home_position = HomePosition()
@@ -28,6 +33,17 @@ class Vehicle:
                 'ext_state', 'global_pos', 'home_pos', 'local_pos',
                 'mission_wp', 'state', 'imu'
             ]
+        }
+        
+        self.action_fun = {
+            "arm": self.arm,
+            "rtl": self.rtl,
+            "guided": self.guided,
+            "land": self.land,
+            "takeoff": self.takeoff,
+            "scan": self.scan_rectangle_m,
+            "goto": self.goto_position_target_local_ned,
+            "velocity": self.send_ned_velocity
         }
         
         # ROS services
@@ -83,13 +99,66 @@ class Vehicle:
                                                             TwistStamped,
                                                             queue_size=10)
                 
-        self.setpoint_local_pub = rospy.Publisher('/mavros/setpoint_raw/local', 
-                                            PositionTarget, 
+        self.setpoint_local_pub = rospy.Publisher('/mavros/setpoint_position/local', 
+                                            PoseStamped, 
                                             queue_size=10)
-        self.setpoint_global_pub = rospy.Publisher('/mavros/setpoint_raw/global', 
-                                            PositionTarget, 
+        self.setpoint_global_pub = rospy.Publisher('/mavros/setpoint_position/global', 
+                                            GeoPoseStamped, 
                                             queue_size=10)
+        """
+        # ROS action clients
+        self.arm_act = actionlib.SimpleActionServer('arm_action_server',
+                                                          act_boolAction, self.execute_arm, False)
+        self.mode_act = actionlib.SimpleActionServer('mode_action_server',
+                                                            act_stringAction, self.execute_mode, False)
+        self.takeoff_act = actionlib.SimpleActionServer('takeoff_action_server',
+                                                            takeoffAction, self.execute_takeoff, False)
+        self.scan_act = actionlib.SimpleActionServer('scan_action_server',
+                                                            scanAction, self.execute_scan, False)
+        self.goto_act = actionlib.SimpleActionServer('goto_action_server',
+                                                            gotoAction, self.execute_goto, False)
+        self.velocity_act = actionlib.SimpleActionServer('velocity_action_server',
+                                                            velocityAction, self.execute_velocity, False)
         
+        self.arm_act.start()
+        self.mode_act.start()
+        self.takeoff_act.start()
+        self.scan_act.start()
+        self.goto_act.start()
+        self.velocity_act.start()
+    
+    def execute_arm(self, goal):
+        rospy.loginfo("executing arm action")
+        return self.arm(goal.data)
+        
+    def execute_mode(self, goal):
+        rospy.loginfo("executing mode action")
+        return self.set_mode(goal.mode)
+    
+    def execute_takeoff(self, goal):
+        rospy.loginfo("executing takeoff action")
+        return self.takeoff(goal.altitude,goal.timeout)
+    
+    def execute_scan(self, goal):
+        rospy.loginfo("executing scan action")
+        return self.scan_rectangle_m(goal.x,goal.y)
+    
+    def execute_goto(self, goal):
+        rospy.loginfo("executing goto action")
+        return self.goto_position_target_local_ned(goal.pose.position.x,goal.pose.position.y,goal.pose.position.z)
+    
+    def execute_velocity(self, goal):
+        rospy.loginfo("executing velocity action")
+        return self.send_ned_velocity(goal.twist.linear.x,goal.twist.linear.y,goal.twist.linear.z,goal.twist.angular.z,goal.duration)
+
+    
+    def execute_drone(self, goal):
+        pass 
+    """
+    
+    def set_thread(self,thread):
+        self.thread_running = thread
+    
     def global_position_callback(self, data):
         self.global_position = data
 
@@ -116,8 +185,7 @@ class Vehicle:
 
     def mission_wp_callback(self, data):
         if self.mission_wp.current_seq != data.current_seq:
-            rospy.loginfo("current mission waypoint sequence updated: {0}".
-                          format(data.current_seq))
+            rospy.loginfo(f"current mission waypoint sequence updated: {data.current_seq}")
 
         self.mission_wp = data
 
@@ -183,31 +251,31 @@ class Vehicle:
         rospy.loginfo(f"Initiating takeoff to {altitude} meters.")
         loop_freq = 1  # Frequency in Hz
         rate = rospy.Rate(loop_freq)
-
-        takeoff_cmd = CommandTOL()
-        takeoff_cmd.altitude = altitude
+        self.z = altitude
+        takeoff_cmd = CommandTOLRequest()
+        takeoff_cmd.yaw = 0
+        takeoff_cmd.min_pitch = 0
         takeoff_cmd.latitude = 0
         takeoff_cmd.longitude = 0
-        takeoff_cmd.min_pitch = 0
-        takeoff_cmd.yaw = 0
-        current_altitude = self.local_position.pose.position.z
-        
+        takeoff_cmd.altitude = altitude
+
         # Send an arming command to prepare for takeoff
         res = self.takeoff_client(takeoff_cmd)
-        
+
         for i in range(timeout * loop_freq):
+            current_altitude = self.local_position.pose.position.z
             # Check if the vehicle is disarmed
             if not self.state.armed:
                 rospy.logerror("Drone is not armed.")
                 break
-            
+
             rospy.loginfo(f"Taking off ({current_altitude}m)")
-            
+
             # Check if the current altitude is close to the desired altitude
             if current_altitude >= altitude * 0.9:
                 rospy.loginfo("Takeoff completed.")
                 return True
-            
+
             # If the previous take off command was not successful, try again
             if not res.success:
                 try:
@@ -215,13 +283,13 @@ class Vehicle:
                     res = self.takeoff_client(takeoff_cmd)
                 except rospy.ServiceException as e:
                     rospy.logerr(e)
-            
+
             rate.sleep()
-        
+
         rospy.logerr("Takeoff failed.")
         return False
 
-    def set_mode(self, mode, timeout):
+    def set_mode(self, mode, timeout = 5):
         """mode: APM mode string, timeout(int): seconds"""
         rospy.loginfo(f"setting FCU mode: {mode}")
         loop_freq = 1  # Hz
@@ -365,8 +433,8 @@ class Vehicle:
 
     def condition_yaw(self,heading, relative=False):
         # Set the desired yaw angle in radians
-        setpoint_msg = PositionTarget()
-        setpoint_msg.yaw = heading
+        setpoint_msg = PoseStamped()
+        setpoint_msg.w = heading
         try:
             if relative:
                 self.setpoint_local_pub.publish(setpoint_msg)
@@ -379,79 +447,86 @@ class Vehicle:
         self.condition_yaw(0, False)
 
     def goto_position_target_local_ned(self, north, east, down):
-        position_target = PositionTarget()
-        position_target.coordinate_frame = PositionTarget.FRAME_LOCAL_NED
-        position_target.type_mask = PositionTarget.IGNORE_VX | PositionTarget.IGNORE_VY | PositionTarget.IGNORE_VZ | PositionTarget.IGNORE_AFX | PositionTarget.IGNORE_AFY | PositionTarget.IGNORE_AFZ
-        position_target.position.x = north
-        position_target.position.y = east
-        position_target.position.z = down
+        position_target = PoseStamped()
+        position_target.header.frame_id = "local_origin_ned"
+        position_target.pose.position.x = north
+        position_target.pose.position.y = east
+        position_target.pose.position.z = down
 
-        self.setpoint_local_pub(position_target)
+        self.setpoint_local_pub.publish(position_target)
 
     def goto_position_target_relative_ned(self, north, east, down):
-        position_target = PositionTarget()
-        position_target.coordinate_frame = PositionTarget.FRAME_BODY_NED
-        position_target.type_mask = PositionTarget.IGNORE_VX | PositionTarget.IGNORE_VY | PositionTarget.IGNORE_VZ | PositionTarget.IGNORE_AFX | PositionTarget.IGNORE_AFY | PositionTarget.IGNORE_AFZ
-        position_target.position.x = north
-        position_target.position.y = east
-        position_target.position.z = down
+        position_target = PoseStamped()
+        position_target.header.frame_id = "fcu"
+        position_target.pose.position.x = north
+        position_target.pose.position.y = east
+        position_target.pose.position.z = down
 
-        self.setpoint_local_pub(position_target)
+        self.setpoint_local_pub.publish(position_target)
 
     def go_in_x_cm(self,cm):
         self.x = self.x + cm/100
-        self.goto_position_target_local_ned(self.x,self.y,-self.z)
+        self.goto_position_target_local_ned(self.x,self.y,self.z)
         #wait until drone reaches the target
         rate = rospy.Rate(2)
         while True:
-            current_x = self.drone.location.local_frame.north
+            current_x = self.local_position.pose.position.x
             if current_x > self.x-0.1 and current_x < self.x+0.1:
                 break
             rate.sleep()
             
     def go_in_y_cm(self,cm):
         self.y = self.y + cm/100
-        self.goto_position_target_local_ned(self.x,self.y,-self.z)
+        self.goto_position_target_local_ned(self.x,self.y,self.z)
         
     def go_in_z_cm(self,cm):
         self.z = self.z + cm/100
-        self.goto_position_target_local_ned(self.x,self.y,-self.z)
+        self.goto_position_target_local_ned(self.x,self.y,self.z)
         
     def go_in_x_y_z_cm(self,x_cm,y_cm,z_cm):
         self.x = self.x + x_cm/100
         self.y = self.y + y_cm/100
         self.z = self.z + z_cm/100
-        self.goto_position_target_local_ned(self.x,self.y,-self.z)
+        self.goto_position_target_local_ned(self.x,self.y,self.z)
         
     def go_in_x_m(self,m):
+        if not self.thread_running:
+            return
+        
         self.x = self.x + m
-        self.goto_position_target_local_ned(self.x,self.y,-self.z)
+        self.goto_position_target_local_ned(self.x,self.y,self.z)
         #wait until drone reaches the target
         rate = rospy.Rate(2)
-        while True:
-            current_x = self.drone.location.local_frame.north
+        while self.thread_running:
+            current_x = self.local_position.pose.position.x
             if current_x > self.x-0.1 and current_x < self.x+0.1:
                 break
             rate.sleep()
             
     def go_in_y_m(self,m):
+        if not self.thread_running:
+            return
+        
         self.y = self.y + m
-        self.goto_position_target_local_ned(self.x,self.y,-self.z)
+        self.goto_position_target_local_ned(self.x,self.y,self.z)
         #wait until drone reaches the target
         rate = rospy.Rate(2)
-        while True:
-            current_y = self.drone.location.local_frame.east
+        while self.thread_running:
+            current_y = self.local_position.pose.position.y
             if current_y > self.y-0.1 and current_y < self.y+0.1:
                 break
             rate.sleep()
             
     def go_in_z_m(self,m):
+        if not self.thread_running:
+            return
+        
         self.z = self.z + m
-        self.goto_position_target_local_ned(self.x,self.y,-self.z)
+        self.goto_position_target_local_ned(self.x,self.y,self.z)
         #wait until drone reaches the target
         rate = rospy.Rate(2)
-        while True:
-            current_z = self.drone.location.local_frame.down
+        while self.thread_running:
+            current_z = self.local_position.pose.position.z
             if current_z > self.z-0.1 and current_z < self.z+0.1:
                 break
             rate.sleep()
@@ -460,7 +535,7 @@ class Vehicle:
         self.x = self.x + x_m
         self.y = self.y + y_m
         self.z = self.z + z_m
-        self.goto_position_target_local_ned(self.x,self.y,-self.z)
+        self.goto_position_target_local_ned(self.x,self.y,self.z)
         
     def scan_rectangle_m(self,x,y):
         self.go_in_y_m(y)
@@ -485,14 +560,8 @@ class Vehicle:
         pass
     
 def main():
-    rospy.init_node('vehicle', anonymous=True)
-    vehicle = Vehicle()
-    vehicle.wait_for_topics(10)
-    vehicle.arm()
-    vehicle.takeoff(3,10)
-    vehicle.guided()
-    vehicle.scan_rectangle_m(10,10)
-    vehicle.rtl()
+    node = Vehicle()
+    rospy.spin()
     
     
 if __name__ == '__main__':

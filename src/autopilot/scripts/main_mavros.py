@@ -4,7 +4,7 @@ import rospy
 import smach
 import time
 import threading
-from std_msgs.msg import String
+from std_msgs.msg import String, Int8
 from std_srvs.srv import Trigger
 from vehicle import Vehicle
 
@@ -13,8 +13,18 @@ class RosNode:
         rospy.init_node('flight_state_machine')
         self.pub = rospy.Publisher('/flight_state', String, queue_size=10)
         self.srv = rospy.Service("/startFlight", Trigger, self.server_callback)
+        self.aruco_find_sub = rospy.Subscriber("/aruco_find",Int8,self.aruco_find_callback)
         self.sm = smach.StateMachine(outcomes=['aborted'])
         self.sm.userdata.is_running = False
+        self.aruco_found = False
+        
+    def aruco_find_callback(self,data:Int8):
+        if data.data == -1:
+            rospy.loginfo("Aruco not found")
+            self.aruco_found = False
+        else:
+            rospy.loginfo("Aruco found")
+            self.aruco_found = True
         
     def server_callback(self, req):
         self.sm.userdata.is_running = not self.sm.userdata.is_running
@@ -47,7 +57,10 @@ class ARM(smach.State):
 
     def execute(self,userdata):
         #rospy.loginfo('Executing state ARM')
-        
+        if self.vehicle.guided():
+            rospy.loginfo('guided')
+        else:
+            return 'failed'
         if self.vehicle.arm():
             return 'armed'
         else:
@@ -65,15 +78,23 @@ class TAKEOFF(smach.State):
         return 'tookOff'
 
 class SEARCH(smach.State):
-    def __init__(self,vehicle:Vehicle):
+    def __init__(self,vehicle:Vehicle,node:RosNode):
         smach.State.__init__(self, outcomes=['arucoLand'])
         self.vehicle = vehicle
+        self.rosnode = node
         
     def execute(self,userdata):
         #rospy.loginfo('Executing state SEARCH')
-        self.vehicle.guided()
-        self.vehicle.scan_rectangle_m(10,10)
-        return 'arucoLand'
+        rate = rospy.Rate(10)
+        search_thread = threading.Thread(target=self.vehicle.scan_rectangle_m,args=(10,10))
+        self.vehicle.set_thread(True)
+        search_thread.start()
+        while True:
+            if self.rosnode.aruco_found:
+                self.vehicle.set_thread(False)
+                search_thread.join()
+                return 'arucoLand'
+            rate.sleep()
     
 class ARUCOLAND(smach.State):
     def __init__(self,vehicle:Vehicle):
@@ -119,7 +140,7 @@ def main():
                                             'failed':'PENDING'})
         smach.StateMachine.add('TAKEOFF', TAKEOFF(vehicle), 
                                transitions={'tookOff':'SEARCH'})
-        smach.StateMachine.add('SEARCH', SEARCH(vehicle), 
+        smach.StateMachine.add('SEARCH', SEARCH(vehicle,node), 
                                transitions={'arucoLand':'ARUCOLAND'})
         smach.StateMachine.add('ARUCOLAND', ARUCOLAND(vehicle),
                                  transitions={'search':'SEARCH',

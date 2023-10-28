@@ -1,0 +1,8 @@
+#goal         
+bool request
+---
+#result
+bool result
+---
+#feedback
+float64 percentage
