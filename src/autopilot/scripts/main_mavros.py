@@ -4,13 +4,14 @@ import rospy
 import smach
 import time
 import threading
-from std_msgs.msg import String, Int8
+from std_msgs.msg import String, Int8, Float64, Bool
 from std_srvs.srv import Trigger
 from vehicle import Vehicle
 
 class RosNode:
     def __init__(self):
         rospy.init_node('flight_state_machine')
+        #ROS Topics
         self.pub = rospy.Publisher('/flight_state', String, queue_size=10)
         self.srv = rospy.Service("/startFlight", Trigger, self.server_callback)
         self.aruco_find_sub = rospy.Subscriber("/aruco_find",Int8,self.aruco_find_callback)
@@ -18,6 +19,19 @@ class RosNode:
         self.sm.userdata.is_running = False
         self.aruco_found = False
         
+        #PID Topics
+        self.setpoint_pub = rospy.Publisher("/setpoint",Float64, queue_size=1)
+        self.state_pub = rospy.Publisher("/state",Float64, queue_size=1)
+        self.controleffort_sub = rospy.Subscriber("/control_effort",Float64,self.controleffort_callback)
+        self.enable_pid_pub = rospy.Publisher("/pid_enable",Bool, queue_size=1)
+        
+        self.enable_pid_pub.publish(False)
+        
+    def server_callback(self, req):
+        self.sm.userdata.is_running = not self.sm.userdata.is_running
+        rospy.loginfo("Main state machine is running: " + str(self.sm.userdata.is_running))
+        return True, "Success"
+    
     def aruco_find_callback(self,data:Int8):
         if data.data == -1:
             rospy.loginfo("Aruco not found")
@@ -25,11 +39,9 @@ class RosNode:
         else:
             rospy.loginfo("Aruco found")
             self.aruco_found = True
-        
-    def server_callback(self, req):
-        self.sm.userdata.is_running = not self.sm.userdata.is_running
-        rospy.loginfo("Main state machine is running: " + str(self.sm.userdata.is_running))
-        return True, "Success"
+            
+    def controleffort_callback(self,data:Float64):
+        self.output = data.data
     
     def get_sm(self):
         return self.sm
@@ -87,22 +99,27 @@ class SEARCH(smach.State):
         #rospy.loginfo('Executing state SEARCH')
         rate = rospy.Rate(10)
         search_thread = threading.Thread(target=self.vehicle.scan_rectangle_m,args=(10,10))
-        self.vehicle.set_thread(True)
+        self.vehicle.set_thread_flag(True)
         search_thread.start()
         while True:
             if self.rosnode.aruco_found:
-                self.vehicle.set_thread(False)
+                self.vehicle.set_thread_flag(False)
                 search_thread.join()
                 return 'arucoLand'
             rate.sleep()
     
 class ARUCOLAND(smach.State):
-    def __init__(self,vehicle:Vehicle):
+    def __init__(self,vehicle:Vehicle,node:RosNode):
         smach.State.__init__(self, outcomes=['rtl','search'])
         self.vehicle = vehicle
+        self.rosnode = node
         
     def execute(self,userdata):
-        #rospy.loginfo('Executing state ARUCOLAND')
+        rate = rospy.Rate(10)
+        self.vehicle.stop_vehicle()
+        while True:
+            rate.sleep()
+        
         return 'rtl'
 
 class RTL(smach.State):
@@ -142,7 +159,7 @@ def main():
                                transitions={'tookOff':'SEARCH'})
         smach.StateMachine.add('SEARCH', SEARCH(vehicle,node), 
                                transitions={'arucoLand':'ARUCOLAND'})
-        smach.StateMachine.add('ARUCOLAND', ARUCOLAND(vehicle),
+        smach.StateMachine.add('ARUCOLAND', ARUCOLAND(vehicle,node),
                                  transitions={'search':'SEARCH',
                                               'rtl':'RTL'})
         smach.StateMachine.add('RTL', RTL(vehicle),

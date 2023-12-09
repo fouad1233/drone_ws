@@ -156,7 +156,7 @@ class Vehicle:
         pass 
     """
     
-    def set_thread(self,thread):
+    def set_thread_flag(self,thread):
         self.thread_running = thread
     
     def global_position_callback(self, data):
@@ -545,6 +545,9 @@ class Vehicle:
         self.go_in_y_m(2*y)
         self.go_in_x_m(x)
         self.go_in_y_m(-y)
+        
+    def stop_vehicle(self):
+        return self.send_ned_velocity(0,0,0,0,duration = 1)
         
         
     def get_location_metres(self,original_location, dNorth, dEast):
