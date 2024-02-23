@@ -9,7 +9,7 @@
     <param name="/baudrate" type="int" value="57600" if="$(eval arg('mode') == 'real')" />
 
     <param name="/land_altitude" type="double" value="0.9" />
-    <param name="/landing_velocity" type="double" value="0.2" />
+    <param name="/landing_velocity" type="double" value="0.1" />
     <param name="/takeoff_altitude" type="double" value="3.0" />
     <param name="/takeoff_velocity" type="double" value="0.5" />
 
@@ -18,35 +18,8 @@
         <arg name="fcu_url" value="$(arg fcu_url)" />
         <arg name="log_output" value="screen" />
     </include>
-    
-    <node name="x_pid" pkg="pid" type="controller" output="screen" >
-      <param name="Kp" value="1.0" />
-      <param name="Ki" value="0.0" />
-      <param name="Kd" value="0.0" />
-      <param name="upper_limit" value="10" />
-      <param name="lower_limit" value="-10" />
-      <param name="windup_limit" value="10" />
-      <param name="cutoff_frequency" value="20" />
-      <param name="max_loop_frequency" value="35.0" />
-      <param name="min_loop_frequency" value="25.0" />
-      <param name="setpoint_timeout" value="-1.0" />
-    </node>
-
-    <node name="y_pid" pkg="pid" type="controller" output="screen" >
-      <param name="Kp" value="1.0" />
-      <param name="Ki" value="0.0" />
-      <param name="Kd" value="0.0" />
-      <param name="upper_limit" value="10" />
-      <param name="lower_limit" value="-10" />
-      <param name="windup_limit" value="10" />
-      <param name="cutoff_frequency" value="20" />
-      <param name="max_loop_frequency" value="35.0" />
-      <param name="min_loop_frequency" value="25.0" />
-      <param name="setpoint_timeout" value="-1.0" />
-    </node>
-
     <!--
-    <node name="left_wheel_pid" pkg="pid" type="controller" output="screen" >
+    <node name="x_pid" pkg="pid" type="controller" output="screen" ns="x_axis">
       <param name="Kp" value="1.0" />
       <param name="Ki" value="0.0" />
       <param name="Kd" value="0.0" />
@@ -54,9 +27,30 @@
       <param name="lower_limit" value="-10" />
       <param name="windup_limit" value="10" />
       <param name="cutoff_frequency" value="20" />
-      <param name="max_loop_frequency" value="35.0" />
-      <param name="min_loop_frequency" value="25.0" />
+      <param name="max_loop_frequency" value="30" />
+      <param name="min_loop_frequency" value="30" />
       <param name="setpoint_timeout" value="-1.0" />
+      <remap from="state"           to="/x_axis/state"/>
+      <remap from="setpoint"        to="/x_axis/setpoint"/>
+      <remap from="control_effort"  to="/x_axis/control_effort"/>
+      <remap from="pid_enable"      to="/x_axis/pid_enable"/>
+    </node>
+
+    <node name="y_pid" pkg="pid" type="controller" output="screen" ns="y_axis">
+      <param name="Kp" value="1.0" />
+      <param name="Ki" value="0.0" />
+      <param name="Kd" value="0.0" />
+      <param name="upper_limit" value="10" />
+      <param name="lower_limit" value="-10" />
+      <param name="windup_limit" value="10" />
+      <param name="cutoff_frequency" value="20" />
+      <param name="max_loop_frequency" value="30" />
+      <param name="min_loop_frequency" value="30" />
+      <param name="setpoint_timeout" value="-1.0" />
+      <remap from="state"           to="/y_axis/state"/>
+      <remap from="setpoint"        to="/y_axis/setpoint"/>
+      <remap from="control_effort"  to="/y_axis/control_effort"/>
+      <remap from="pid_enable"      to="/y_axis/pid_enable"/>
     </node>
     -->
 

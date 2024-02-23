@@ -4,6 +4,7 @@ import rospy
 import cv2
 from sensor_msgs.msg import Image
 from std_msgs.msg import Bool, Int8
+from ros_msgs.msg import ArucoStatus
 #from nav_msgs.msg import Odometry
 from geometry_msgs.msg import PoseStamped
 from cv_bridge import CvBridge, CvBridgeError
@@ -34,9 +35,8 @@ class ArucoDetection():
         self.arucoParams = cv2.aruco.DetectorParameters()
         self.fov_x = 62.2
         self.fov_y = 48.8
-        self.aruco_find_pub = rospy.Publisher("/aruco_find",Int8,queue_size=10)
-        self.aruco_find_state = False
-
+        self.aruco_status_pub = rospy.Publisher("/ArucoStatus",ArucoStatus,queue_size=10)
+        self.ArucoStatus = ArucoStatus()
         
     def position_callback(self,data:PoseStamped):
         self.height = data.pose.position.z
@@ -87,23 +87,30 @@ class ArucoDetection():
                 image_height,image_width,_ = self.image.shape
                 center_point = (image_width/2,image_height/2)
                 distance_to_center = cX-center_point[0] , cY-center_point[1]
-                #print(distance_to_center)
+             
                 cv2.line(self.image,(int(center_point[0]),int(center_point[1])),(cX,cY),(0,0,255),2)
                 distance_to_center_meters = (self.pixels_to_meters(distance_to_center[0],self.fov_x,image_width,self.height), self.pixels_to_meters(distance_to_center[1],self.fov_y,image_height,self.height))
-                #rospy.loginfo(distance_to_center_meters)
-                
-                if self.aruco_find_state == False:
-                    self.aruco_find_pub.publish(markerID)
-                    self.aruco_find_state = True
-                
+                           
+                           
+            self.ArucoStatus.x_state = self.pixels_to_meters(cX,self.fov_x,image_width,self.height)
+            self.ArucoStatus.x_setpoint = self.pixels_to_meters(center_point[0],self.fov_x,image_width,self.height)
+
+            self.ArucoStatus.y_state = self.pixels_to_meters(cY,self.fov_y,image_width,self.height)
+            self.ArucoStatus.y_setpoint = self.pixels_to_meters(center_point[1],self.fov_y,image_width,self.height)
+
+            self.ArucoStatus.id = markerID
+            self.ArucoStatus.found_aruco = True
+            self.aruco_status_pub.publish(self.ArucoStatus)
+            
+            
             return self.image,cX,cY
-        
+            
         else:
-            if self.aruco_find_state == True:
-                self.aruco_find_pub.publish(-1)
-                self.aruco_find_state = False
-                
-        return self.image,None,None
+            self.ArucoStatus.found_aruco = False #No aruco found
+            self.aruco_status_pub.publish(self.ArucoStatus)   
+            return self.image,None,None
+            
+        
 
 if __name__ == '__main__':
     
