@@ -29,6 +29,7 @@ class ReceiveImage:
 class ArucoDetection():
     def __init__(self, markerSize=4, totalMarkers=50,draw=True):
         self.image = None
+        self.height = 0
         self.position_sub = rospy.Subscriber("/mavros/local_position/pose",PoseStamped,self.position_callback)
         key = getattr(cv2.aruco,f'DICT_{markerSize}X{markerSize}_{totalMarkers}' )
         self.arucoDict = cv2.aruco.getPredefinedDictionary(key)
