@@ -25,6 +25,8 @@ class ArucoStatusInstance:
         self.y_setpoint = 0
         self.id = 0
         self.found_aruco = False
+        self.aruco_not_found_counter = 0
+
 
 class RosNode:
     def __init__(self):
@@ -69,24 +71,20 @@ class RosNode:
     
     def aruco_status_callback(self,data:ArucoStatus):
         if data.found_aruco:
-            self.ArucoStatus.x_state = data.x_state
-            self.ArucoStatus.x_setpoint = data.x_setpoint
-            self.ArucoStatus.y_state = data.y_state
-            self.ArucoStatus.y_setpoint = data.y_setpoint
-            self.ArucoStatus.id = data.id
+            self.copy_aruco_status(self.ArucoStatus,data)
+            self.ArucoStatus.aruco_not_found_counter = 0
             
             if not self.ArucoStatus.found_aruco:
                 vehicle.set_running_flag(False)
                 rospy.loginfo("Aruco found!")
-                
-            rospy.loginfo("Displacement Axis X: %f, Axis Y: %f", self.ArucoStatus.x_state - self.ArucoStatus.x_setpoint, 
-                                                                 self.ArucoStatus.y_state - self.ArucoStatus.y_setpoint)
-            rospy.loginfo("x_state: %f, x_setpoint: %f, y_state: %f, y_setpoint: %f", self.ArucoStatus.x_state, self.ArucoStatus.x_setpoint,
-                                                                                      self.ArucoStatus.y_state, self.ArucoStatus.y_setpoint)
+
         else:
+            self.ArucoStatus.aruco_not_found_counter += 1
+            if self.ArucoStatus.aruco_not_found_counter > 5: #If Aruco not found for 10 consecutive frames
+                self.ArucoStatus.reset()
+            
             if self.ArucoStatus.found_aruco:
-              self.ArucoStatus.reset()
-              rospy.loginfo("Aruco not found")
+                rospy.loginfo("Aruco not found")
         self.ArucoStatus.found_aruco = data.found_aruco
         
     def controleffort_callback_x(self,data:Float64):
@@ -98,7 +96,13 @@ class RosNode:
         self.control_effort_axis.y = data.data
         self.new_control_effort_y = True
         #rospy.loginfo("Control effort Axis Y: %f", self.control_effort_axis.y)
-
+        
+    def copy_aruco_status(self, arucoobj:ArucoStatus, data:ArucoStatus):
+        arucoobj.x_state = data.x_state
+        arucoobj.x_setpoint = data.x_setpoint
+        arucoobj.y_state = data.y_state
+        arucoobj.y_setpoint = data.y_setpoint
+        arucoobj.id = data.id
     
     def get_sm(self):
         return self.sm
@@ -116,6 +120,7 @@ class PENDING(smach.State):
         
     def execute(self,userdata):
         #rospy.loginfo('PENDING')
+
         while True:
             if userdata.isRunning:
                 return 'start'
@@ -160,34 +165,19 @@ class TAKEOFF(smach.State):
         
 class SEARCH(smach.State):
     def __init__(self):
-        smach.State.__init__(self, outcomes=['arucoLand','rtl'],
+        smach.State.__init__(self, outcomes=['arucoLand','pending','rtl'],
                              input_keys=['isRunning'],
                              output_keys=['isRunning'])
-    """
-    def execute(self,userdata):
-        #rospy.loginfo('Executing state SEARCH')
-        rate = rospy.Rate(10)
-        search_thread = threading.Thread(target=vehicle.scan_rectangle_m,args=(10,10))
-        vehicle.set_thread_flag(True)
-        search_thread.start()
-        while True:
-            if node.displacement.found_aruco:
-                vehicle.set_thread_flag(False)
-                vehicle.stop_vehicle()
-                search_thread.join()
-                return 'arucoLand'
-            rate.sleep()
-    """
         
     def execute(self,userdata):
         #rospy.loginfo('Executing state SEARCH')
         rate = rospy.Rate(10)
         vehicle.set_running_flag(True)
-        vehicle.scan_rectangle_m_vel(20,8,vel = 0.5) #Scan a 12x8m rectangle 
+        vehicle.scan_rectangle_m(12,8) #Scan a 12x8m rectangle 
         vehicle.stop_vehicle()
 
         if node.ArucoStatus.found_aruco:
-            return 'pending'
+            return 'arucoLand'
         else:
             return 'rtl'
     
@@ -201,40 +191,24 @@ class ARUCOLAND(smach.State):
         rate = rospy.Rate(10)
 
         land_altitude = rospy.get_param('/land_altitude',0.9)
-        land_velocity = rospy.get_param('/land_velocity',0.1)
+        land_velocity = rospy.get_param('/land_velocity',0.5)
         
-        land_velocity = 0
-        p = 1
-        
-        """
-        node.pid_enable_x.publish(True)
-        node.pid_enable_y.publish(True)
-        """
-        while vehicle.local_position.pose.position.z > land_altitude:
-            """
-            node.state_pub_x.publish(node.ArucoStatus.x_state)
-            node.state_pub_y.publish(node.ArucoStatus.y_state)
-            
-            node.setpoint_pub_x.publish(node.ArucoStatus.x_setpoint)
-            node.setpoint_pub_y.publish(node.ArucoStatus.y_setpoint)
-            """
-            """
-            while not node.new_control_effort_x and not node.new_control_effort_y:
-                rate.sleep()
-            node.new_control_effort_x, node.new_control_effort_y = False, False
-            """
-            
-            node.control_effort_axis.x = p * (node.ArucoStatus.x_state - node.ArucoStatus.x_setpoint)
-            node.control_effort_axis.y = p * (node.ArucoStatus.y_state - node.ArucoStatus.y_setpoint)
+        p = 2
 
-            vehicle.set_velocity_once(node.control_effort_axis.x, node.control_effort_axis.y, -land_velocity, yaw_rate=0, duration=0)
+        while vehicle.local_position.pose.position.z > land_altitude:
+            
+            node.control_effort_axis.x = p * (node.ArucoStatus.x_setpoint - node.ArucoStatus.x_state)
+            node.control_effort_axis.y = p * (node.ArucoStatus.y_setpoint - node.ArucoStatus.y_state)
+
+            rospy.loginfo("Displacement Axis X: %f, Axis Y: %f", node.control_effort_axis.x/p, node.control_effort_axis.y/p)
+            rospy.loginfo("Control Effort X: %f, Control Effort Y: %f", node.control_effort_axis.x, node.control_effort_axis.y)
+
+            vehicle.send_ned_velocity(node.control_effort_axis.y, node.control_effort_axis.x, -land_velocity, yaw_rate=0, duration=0)
             rate.sleep()
         
+        node.ArucoStatus.reset()
         vehicle.land() #If current altitude is less than land altitude, set mode to land
-        """
-        node.pid_enable_x.publish(False)
-        node.pid_enable_y.publish(False)
-        """
+
         userdata.isRunning = False
         return 'pending'
 
@@ -257,6 +231,7 @@ class RTL(smach.State):
     
 def main():
     sm = node.get_sm()
+
     with sm:
         # Add states to the container
         smach.StateMachine.add('PENDING', PENDING(), 
@@ -274,6 +249,7 @@ def main():
                                remapping={'isRunning':'is_running'})
         smach.StateMachine.add('SEARCH', SEARCH(), 
                                transitions={'arucoLand':'ARUCOLAND',
+                                            'pending':'PENDING',
                                             'rtl':'RTL'},
                                remapping={'isRunning':'is_running'})
         smach.StateMachine.add('ARUCOLAND', ARUCOLAND(),
