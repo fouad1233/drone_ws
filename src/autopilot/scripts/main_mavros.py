@@ -10,9 +10,12 @@ from ros_msgs.msg import ArucoStatus
 from vehicle import Vehicle
 
 class Axis:
-    def __init__(self):
+    def __init__(self,x=0,y=0):
         self.x = 0
         self.y = 0
+        
+    def __str__(self):
+        return "X: " + str(self.x) + "Y: " + str(self.y)
         
 class ArucoStatusInstance:
     def __init__(self):
@@ -26,6 +29,14 @@ class ArucoStatusInstance:
         self.id = 0
         self.found_aruco = False
         self.aruco_not_found_counter = 0
+        
+class ArucoMarker(Axis):
+    def __init__(self, id, x, y):
+        super().__init__(x,y)
+        self.id = id
+        
+    def __str__(self):
+        return "ID: " + str(self.id) + " Coordinates: " + str((self.x,self.y))
 
 
 class RosNode:
@@ -38,32 +49,15 @@ class RosNode:
         self.sm = smach.StateMachine(outcomes=['aborted'])
         self.sm.userdata.is_running = False
 
-        self.control_effort_axis = Axis()
         self.ArucoStatus = ArucoStatusInstance()
         
-        """
-        PID Topics
-        plant_node: Subscribes to control_effort and publishes on state and setpoint.
-        
-        
-        self.pid_enable_x =         rospy.Publisher("/x_axis/pid_enable",Bool, queue_size=1)
-        self.state_pub_x =          rospy.Publisher("/x_axis/state",Float64, queue_size=1)
-        self.setpoint_pub_x =       rospy.Publisher("/x_axis/setpoint",Float64, queue_size=1)
-        self.controleffort_sub_x =  rospy.Subscriber("/x_axis/control_effort",Float64,self.controleffort_callback_x)
-        
-        self.pid_enable_y =         rospy.Publisher("/y_axis/pid_enable",Bool, queue_size=1)
-        self.state_pub_y =          rospy.Publisher("/y_axis/state",Float64, queue_size=1)
-        self.setpoint_pub_y =       rospy.Publisher("/y_axis/setpoint",Float64, queue_size=1)
-        self.controleffort_sub_y =  rospy.Subscriber("/y_axis/control_effort",Float64,self.controleffort_callback_y)
-        
-        #Flag to check if new control effort has been received
-        self.new_control_effort_x = False 
-        self.new_control_effort_y = False
-        
-        self.pid_enable_x.publish(False)
-        self.pid_enable_y.publish(False)
-        """
-        
+        self.ArucoMarkers = [ArucoMarker(3, 10 ,10),
+                             ArucoMarker(4, 10 ,0),
+                             ArucoMarker(5, 10 ,-10),
+                             ArucoMarker(2, -10,-10),
+                             ArucoMarker(1, -10,0),
+                             ArucoMarker(0, -10,10)]
+
     def server_callback(self, req):
         self.sm.userdata.is_running = not self.sm.userdata.is_running
         rospy.loginfo("Main state machine is running: " + str(self.sm.userdata.is_running))
@@ -86,16 +80,6 @@ class RosNode:
             if self.ArucoStatus.found_aruco:
                 rospy.loginfo("Aruco not found")
         self.ArucoStatus.found_aruco = data.found_aruco
-        
-    def controleffort_callback_x(self,data:Float64):
-        self.control_effort_axis.x = data.data
-        self.new_control_effort_x = True
-        #rospy.loginfo("Control effort Axis X: %f", self.control_effort_axis.x)
-        
-    def controleffort_callback_y(self,data:Float64):
-        self.control_effort_axis.y = data.data
-        self.new_control_effort_y = True
-        #rospy.loginfo("Control effort Axis Y: %f", self.control_effort_axis.y)
         
     def copy_aruco_status(self, arucoobj:ArucoStatus, data:ArucoStatus):
         arucoobj.x_state = data.x_state
@@ -190,20 +174,22 @@ class ARUCOLAND(smach.State):
     def execute(self,userdata):
         rate = rospy.Rate(10)
 
-        land_altitude = rospy.get_param('/land_altitude',0.9)
-        land_velocity = rospy.get_param('/land_velocity',0.5)
+        land_altitude = rospy.get_param('/land_altitude',0.6)
+        land_velocity = rospy.get_param('/land_velocity',0.4)
         
         p = 2
+        
+        control_effort_axis = Axis()
 
         while vehicle.local_position.pose.position.z > land_altitude:
             
-            node.control_effort_axis.x = p * (node.ArucoStatus.x_setpoint - node.ArucoStatus.x_state)
-            node.control_effort_axis.y = p * (node.ArucoStatus.y_setpoint - node.ArucoStatus.y_state)
+            control_effort_axis.x = p * (node.ArucoStatus.x_setpoint - node.ArucoStatus.x_state)
+            control_effort_axis.y = p * (node.ArucoStatus.y_setpoint - node.ArucoStatus.y_state)
 
-            rospy.loginfo("Displacement Axis X: %f, Axis Y: %f", node.control_effort_axis.x/p, node.control_effort_axis.y/p)
-            rospy.loginfo("Control Effort X: %f, Control Effort Y: %f", node.control_effort_axis.x, node.control_effort_axis.y)
+            rospy.loginfo("Displacement Axis X: %f, Axis Y: %f", control_effort_axis.x/p, control_effort_axis.y/p)
+            rospy.loginfo("Control Effort X: %f, Control Effort Y: %f", control_effort_axis.x, control_effort_axis.y)
 
-            vehicle.send_ned_velocity(node.control_effort_axis.y, node.control_effort_axis.x, -land_velocity, yaw_rate=0, duration=0)
+            vehicle.send_ned_velocity(control_effort_axis.y, control_effort_axis.x, -land_velocity, yaw_rate=0, duration=0)
             rate.sleep()
         
         node.ArucoStatus.reset()

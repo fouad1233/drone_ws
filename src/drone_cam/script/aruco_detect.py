@@ -53,7 +53,6 @@ class ArucoDetection():
     def detect_aruco(self,image):
         self.image = image
         (corners, ids, rejected) = cv2.aruco.detectMarkers(self.image, self.arucoDict, parameters=self.arucoParams)
-        #print(ids)
                 
         if len(corners) > 0:
             # flatten the ArUco IDs list
