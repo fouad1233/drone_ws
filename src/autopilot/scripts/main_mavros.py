@@ -2,7 +2,7 @@
 
 import rospy
 import smach
-import time
+import time, random
 import threading
 from std_msgs.msg import String, Float64, Bool
 from std_srvs.srv import Trigger
@@ -57,6 +57,7 @@ class RosNode:
                              ArucoMarker(2, -10,-10),
                              ArucoMarker(1, -10,0),
                              ArucoMarker(0, -10,10)]
+        self.wanted_aruco_id = 0
 
     def server_callback(self, req):
         self.sm.userdata.is_running = not self.sm.userdata.is_running
