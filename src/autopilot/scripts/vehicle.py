@@ -316,57 +316,6 @@ class Vehicle:
 
         return False
         
-    def clear_wps(self, timeout):
-        """timeout(int): seconds"""
-        loop_freq = 1  # Hz
-        rate = rospy.Rate(loop_freq)
-        for i in range(timeout * loop_freq):
-            if not self.mission_wp.waypoints:
-                rospy.loginfo("clear waypoints success")
-                return True
-            else:
-                try:
-                    res = self.wp_clear_srv()
-                    if not res.success:
-                        rospy.logerr("failed to send waypoint clear command")
-                except rospy.ServiceException as e:
-                    rospy.logerr(e)
-            rate.sleep()
-
-        return False
-
-    def send_wps(self, waypoints, timeout):
-        """waypoints, timeout(int): seconds"""
-        rospy.loginfo("sending mission waypoints")
-        if self.mission_wp.waypoints:
-            rospy.loginfo("FCU already has mission waypoints")
-
-        loop_freq = 1  # Hz
-        rate = rospy.Rate(loop_freq)
-        wps_sent = False
-        wps_verified = False
-        for i in range(timeout * loop_freq):
-            if not wps_sent:
-                try:
-                    res = self.wp_push_srv(start_index=0, waypoints=waypoints)
-                    wps_sent = res.success
-                    if wps_sent:
-                        rospy.loginfo("waypoints successfully transferred")
-                except rospy.ServiceException as e:
-                    rospy.logerr(e)
-            else:
-                if len(waypoints) == len(self.mission_wp.waypoints):
-                    rospy.loginfo(f"number of waypoints transferred: {len(waypoints)}")
-                    wps_verified = True
-
-            if wps_sent and wps_verified:
-                rospy.loginfo("send waypoints success")
-                return True
-            
-            rate.sleep()
-            
-        return False
-        
     def arm(self):
         return self.set_arm(True, timeout = 5)
     
@@ -481,6 +430,59 @@ class Vehicle:
             
     def turn_to_north(self):
         self.condition_yaw(0, False)
+        
+        
+    def clear_wps(self, timeout):
+        """timeout(int): seconds"""
+        loop_freq = 1  # Hz
+        rate = rospy.Rate(loop_freq)
+        for i in range(timeout * loop_freq):
+            if not self.mission_wp.waypoints:
+                rospy.loginfo("clear waypoints success")
+                return True
+            else:
+                try:
+                    res = self.wp_clear_srv()
+                    if not res.success:
+                        rospy.logerr("failed to send waypoint clear command")
+                except rospy.ServiceException as e:
+                    rospy.logerr(e)
+            rate.sleep()
+
+        return False
+
+    def send_wps(self, waypoints, timeout):
+        """waypoints, timeout(int): seconds"""
+        rospy.loginfo("sending mission waypoints")
+        if self.mission_wp.waypoints:
+            rospy.loginfo("FCU already has mission waypoints")
+
+        loop_freq = 1  # Hz
+        rate = rospy.Rate(loop_freq)
+        wps_sent = False
+        wps_verified = False
+        for i in range(timeout * loop_freq):
+            if not wps_sent:
+                try:
+                    res = self.wp_push_srv(start_index=0, waypoints=waypoints)
+                    wps_sent = res.success
+                    if wps_sent:
+                        rospy.loginfo("waypoints successfully transferred")
+                except rospy.ServiceException as e:
+                    rospy.logerr(e)
+            else:
+                if len(waypoints) == len(self.mission_wp.waypoints):
+                    rospy.loginfo(f"number of waypoints transferred: {len(waypoints)}")
+                    wps_verified = True
+
+            if wps_sent and wps_verified:
+                rospy.loginfo("send waypoints success")
+                return True
+            
+            rate.sleep()
+            
+        return False
+    
     
     def get_location_metres(self,original_location, dNorth, dEast):
         pass
